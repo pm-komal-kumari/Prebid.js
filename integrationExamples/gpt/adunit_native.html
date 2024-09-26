@@ -1,0 +1,189 @@
+<!--
+   NATIVE version 1.1 example 
+   
+   -->
+   <html>
+
+   <head>
+    <script async src="../../build/dev/prebid.js"></script>
+       <script>
+           var PREBID_TIMEOUT = 3000;
+           var adUnits = [
+            {
+                code: 'Div1',
+                sizes: ['fluid'],
+                mediaTypes: {
+                    native: {
+                        image: {
+                            ext: {
+                                image3: "image4"
+                            },
+                            sizes: [728, 90],
+                            required: !0,
+                            mimes: ["image/png", "image/gif"]
+                        },
+                        sponsoredBy: {
+                            ext: {
+                                sponsor3: "sponsor4"
+                            },
+                            len: 2,
+                            required: !0
+                        },
+                        icon: {
+                            ext: {
+                                icon3: "icon4"
+                            },
+                            sizes: [100, 100],
+                            required: !0
+                        },
+                        title: {
+                            ext: {
+                                title3: "title4"
+                            },
+                            len: 50,
+                            required: !0
+                        },
+                        body: {
+                            ext: {
+                                body3: "body4"
+                            },
+                            len: 2,
+                            required: !0
+                        }
+                    }
+                },
+                bids: [
+                    {
+                        bidder: 'pubmatic',
+                        params: {
+                            publisherId: '  5890  ',
+                            pmzoneid: 'zone1',
+                            kadpageurl: '     www.yahoo.com',
+
+                            yob: '  1982  ',
+                            gender: '   M   ',
+                            kadfloor: '  1.75   ',
+                            adSlot: '/43743431/NativeAutomationPrebid@1x1',
+                        }
+                    }
+                ]
+            }
+        ];
+   
+           var pbjs = pbjs || {};
+           pbjs.que = pbjs.que || [];
+   
+       </script>
+     
+       <script>
+           var googletag = googletag || {};
+           googletag.cmd = googletag.cmd || [];
+           googletag.cmd.push(function () {
+               googletag.pubads().disableInitialLoad();
+           });
+   
+           pbjs.que.push(function () {
+               pbjs.setConfig({
+                   firstPartyData: {
+                       uaHints: ['architecture', 'bitness', 'browsers', 'mobile', 'model', 'source']
+                   },
+   
+                   debug: true,
+                   ortb2: {
+                       device: {
+                           geo: {
+                               lat: 40.712775,
+                               lon: -74.005973,
+                           }
+                       }
+                   },
+                   userSync: {
+                       topics: {
+                           maxTopicCaller: 4,
+                           bidders: [{
+                               bidder: 'pubmatic',
+                               iframeURL: 'https://ads.pubmatic.com/AdServer/js/topics/topics_frame.html'
+                           }]
+                       },
+                       filterSettings: { iframe: { bidders: '*', filter: 'include' } },
+                       enabledBidders: ['pubmatic'],
+                       syncDelay: 3000,
+                   }
+               });
+               pbjs.enableAnalytics({
+                   provider: 'pubmatic',
+                   options: {
+                       publisherId: 5890,
+                       profileId: 3596,
+                       profileVersionId: 1
+                   }
+               });
+               pbjs.addAdUnits(adUnits);
+               pbjs.requestBids({
+                   bidsBackHandler: sendAdserverRequest
+               });
+   
+           });
+   
+           function sendAdserverRequest() {
+               if (pbjs.adserverRequestSent) return;
+               pbjs.adserverRequestSent = true;
+               googletag.cmd.push(function () {
+                   pbjs.que.push(function () {
+                       pbjs.setTargetingForGPTAsync();
+                       googletag.pubads().refresh();
+                   });
+               });
+           }
+   
+           setTimeout(function () {
+               sendAdserverRequest();
+           }, PREBID_TIMEOUT);
+   
+   
+   
+   
+       </script>
+       <script>
+           (function () {
+               var gads = document.createElement('script');
+               gads.async = true;
+               gads.type = 'text/javascript';
+               var useSSL = 'https:' == document.location.protocol;
+               gads.src = (useSSL ? 'https:' : 'http:') +
+                   '//www.googletagservices.com/tag/js/gpt.js';
+               var node = document.getElementsByTagName('script')[0];
+               node.parentNode.insertBefore(gads, node);
+           })();
+   
+   
+   
+       </script>
+       <script>
+           googletag.cmd.push(function () {
+               googletag.defineSlot('/43743431/NativeAutomationPrebid', [['fluid'],[728,90]], 'Div1').addService(googletag.pubads());
+               googletag.pubads().enableSingleRequest();
+               googletag.enableServices();
+           });
+   
+   
+   
+       </script>
+   </head>
+   
+   <body>
+       <h2>Prebid.js Test</h2>
+       <h5>Div-1</h5>
+       <div id='Div1'>
+           <script type='text/javascript'>
+               googletag.cmd.push(function () {
+                   googletag.display('Div1');
+               });
+   
+   
+   
+           </script>
+       </div>
+   </body>
+   
+   </html>

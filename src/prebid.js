@@ -500,6 +500,7 @@ pbjsInstance.removeAdUnit = function (adUnitCode) {
 pbjsInstance.requestBids = (function() {
   const delegate = hook('async', function ({ bidsBackHandler, timeout, adUnits, adUnitCodes, labels, auctionId, ttlBuffer, ortb2, metrics, defer } = {}) {
     events.emit(REQUEST_BIDS);
+    console.log('In prebid.js -> in request Bid fn ');
     const cbTimeout = timeout || config.getConfig('bidderTimeout');
     logInfo('Invoking $$PREBID_GLOBAL$$.requestBids', arguments);
     if (adUnitCodes != null && !Array.isArray(adUnitCodes)) {
@@ -547,6 +548,8 @@ export const startAuction = hook('async', function ({ bidsBackHandler, timeout: 
   adUnits = useMetrics(metrics).measureTime('requestBids.validate', () => checkAdUnitSetup(adUnits));
 
   function auctionDone(bids, timedOut, auctionId) {
+    console.log('In prebid.js -> in auctionDone fn -> retract!!!');
+
     if (typeof bidsBackHandler === 'function') {
       try {
         bidsBackHandler(bids, timedOut, auctionId);
@@ -631,10 +634,12 @@ export const startAuction = hook('async', function ({ bidsBackHandler, timeout: 
 
     adUnitCodes.forEach(code => targeting.setLatestAuctionForAdUnit(code, auction.getAuctionId()));
     auction.callBids();
+    console.log('In prebid.js -> in startAuction fn -> startAuction ends -> retract!!!');
   }
 }, 'startAuction');
 
 export function executeCallbacks(fn, reqBidsConfigObj) {
+  console.log('In prebid.js -> in pbjsInstance.requestBids.before(executeCallbacks, 49); ');
   runAll(storageCallbacks);
   runAll(enableAnalyticsCallbacks);
   fn.call(this, reqBidsConfigObj);

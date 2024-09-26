@@ -124,6 +124,7 @@ export function newAuctionManager() {
 
   auctionManager.createAuction = function(opts) {
     const auction = newAuction(opts);
+    console.log('In auctionManager.js  -> In createAuction fn -> auction ->', auction);
     _addAuction(auction);
     return auction;
   };

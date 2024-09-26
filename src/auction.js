@@ -194,6 +194,8 @@ export function newAuction({adUnits, adUnitCodes, callback, cbTimeout, labels, a
 
   function executeCallback(timedOut) {
     if (!timedOut) {
+      console.log('In auction.js -> in executeCallback fn -> timedOut is false -> _auctionEnd ', _auctionEnd);
+      console.log()
       clearTimeout(_timeoutTimer);
     } else {
       events.emit(EVENTS.AUCTION_TIMEOUT, getProperties());
@@ -218,6 +220,8 @@ export function newAuction({adUnits, adUnitCodes, callback, cbTimeout, labels, a
       events.emit(EVENTS.AUCTION_END, getProperties());
       bidsBackCallback(_adUnits, function () {
         try {
+          console.log('In auction.js -> in executeCallback fn -> in bidsBackCallback fn -> _callback ', _callback);
+
           if (_callback != null) {
             const bids = _bidsReceived
               .filter(bid => _adUnitCodes.includes(bid.adUnitCode))
@@ -228,6 +232,7 @@ export function newAuction({adUnits, adUnitCodes, callback, cbTimeout, labels, a
         } catch (e) {
           logError('Error executing bidsBackHandler', null, e);
         } finally {
+          console.log('In auction.js -> in executeCallback fn -> in bidsBackCallback fn -> in finally block -> timedOutRequests', timedOutRequests);
           // Calling timed out bidders
           if (timedOutRequests.length) {
             adapterManager.callTimedOutBidders(adUnits, timedOutRequests, _timeout);
@@ -246,6 +251,7 @@ export function newAuction({adUnits, adUnitCodes, callback, cbTimeout, labels, a
   function auctionDone() {
     config.resetBidder();
     // when all bidders have called done callback atleast once it means auction is complete
+    console.log('In auction.js -> in auctionDone fn -> bidRequest is empty');
     logInfo(`Bids Received for Auction with id: ${_auctionId}`, _bidsReceived);
     _auctionStatus = AUCTION_COMPLETED;
     executeCallback(false);
@@ -274,6 +280,7 @@ export function newAuction({adUnits, adUnitCodes, callback, cbTimeout, labels, a
         context: this
       }, bidRequests);
     }
+    console.log('In auction.js -> in callBids fn -> callbid ends -> retract!!!');
   }
 
   /**
@@ -281,6 +288,7 @@ export function newAuction({adUnits, adUnitCodes, callback, cbTimeout, labels, a
    * @param {BidRequest[]} bidRequests
    */
   function addBidderRequestsCallback(bidRequests) {
+    console.log('In auction.js -> In addBidderRequestsCallback fn -> ');
     bidRequests.forEach(bidRequest => {
       addBidRequests(bidRequest);
     });
@@ -296,6 +304,7 @@ export function newAuction({adUnits, adUnitCodes, callback, cbTimeout, labels, a
         events.emit(EVENTS.AUCTION_INIT, getProperties());
 
         let callbacks = auctionCallbacks(auctionDone, this);
+        console.log('In auction.js -> In addBidderRequestsCallback fn -> in run fn -> calling adapterManager.callBids(_adUnits, bidRequests)', _adUnits);
         adapterManager.callBids(_adUnits, bidRequests, callbacks.addBidResponse, callbacks.adapterDone, {
           request(source, origin) {
             increment(outstandingRequests, origin);
