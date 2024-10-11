@@ -1,0 +1,19 @@
+{
+	"currency": "USD",
+	"floorProvider": "PM",
+	"floorsSchemaVersion": 2,
+	"modelGroups": [
+	  {
+		"modelWeight": 100,
+		"schema": {
+		  "fields": [
+			"mediaType"
+		  ]
+		},
+		"values": {
+		  "banner": 2
+		}
+	  }
+	],
+	"skipRate": 0
+  }
