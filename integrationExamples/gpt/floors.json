@@ -3,17 +3,39 @@
 	"floorProvider": "PM",
 	"floorsSchemaVersion": 2,
 	"modelGroups": [
-	  {
-		"modelWeight": 100,
-		"schema": {
-		  "fields": [
-			"mediaType"
-		  ]
-		},
-		"values": {
-		  "banner": 2
-		}
-	  }
+
+		{
+			"modelWeight": 100,
+			"schema": {
+			  "fields": [
+				"mediaType","deviceType","timeOfDay"
+			  ]
+			},
+			"values": {
+			  "banner|mobile|morning": 2,
+			  "banner|mobile|afternoon": 1,
+			  "banner|mobile|evening": 1.5,
+			  "banner|mobile|night": 15,
+			  "banner|desktop|morning": 5,
+			  "banner|desktop|afternoon": 0.8,
+			  "banner|desktop|evening": 0.20,
+			  "banner|desktop|night": 1.2,
+			  "banner|desktop|*": 10
+			}
+		  }
+		  ,
+		  {
+			"modelWeight": 0,
+			"schema": {
+			  "fields": [
+				"mediaType","deviceType"
+			  ]
+			},
+			"values": {
+			  "banner|mobile": 2,
+			  "banner|desktop": 5
+			}
+		  }
 	],
 	"skipRate": 0
   }

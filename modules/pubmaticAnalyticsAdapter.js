@@ -526,6 +526,7 @@ function executeBidWonLoggerCall(auctionId, adUnitId) {
 /// /////////// ADAPTER EVENT HANDLER FUNCTIONS //////////////
 
 function auctionInitHandler(args) {
+  console.log('auctionInitHandler', args);
   s2sBidders = (function() {
     let s2sConf = config.getConfig('s2sConfig');
     let s2sBidders = [];
@@ -546,6 +547,7 @@ function auctionInitHandler(args) {
 }
 
 function bidRequestedHandler(args) {
+  console.log('bidRequestedHandler', args);
   args.bids.forEach(function(bid) {
     if (!cache.auctions[args.auctionId].adUnitCodes.hasOwnProperty(bid.adUnitCode)) {
       cache.auctions[args.auctionId].adUnitCodes[bid.adUnitCode] = {
@@ -565,6 +567,7 @@ function bidRequestedHandler(args) {
 }
 
 function bidResponseHandler(args) {
+  console.log('bidResponseHandler', args);
   if (!args.requestId) {
     logWarn(LOG_PRE_FIX + 'Got null requestId in bidResponseHandler');
     return;

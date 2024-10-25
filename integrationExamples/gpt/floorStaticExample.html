@@ -48,37 +48,24 @@
         });
 
         pbjs.que.push(function () {
-
             pbjs.setConfig({
                 enableSendAllBids : true,
                 enableTIDs: true,
                 bidderTimeout: 3000,
-                realTimeData: {
-                    auctionDelay: 500, 
-                    dataProviders: [{
-                        name: 'pubmatic',
-                        waitForIt: true,
-                        params:{
-                            publisherId: '103207'
-                        }
-                    }
-                ,
-                {
-                name: 'adagio',
-                params: {
-                    organizationId: '1000', // Required. Provided by Adagio
-                    site: 'my-site', // Required. Provided by Adagio
-                    placementSource: 'ortb' // Optional. Where to find the "placement" value. Possible values: 'ortb'<default> | 'code' | 'gpid'
-                }
-    }]
-                },
                 floors: {
                     enforcement: {
-                        enforceJS: true
+                        enforceJS: false
                     },
-                    auctionDelay: 500,
-                    endpoint:{
-                        url: './floors.json'
+                    data: {   
+                        currency: 'USD',
+                        skipRate: 0,
+                        modelVersion: 'some setconfig model version',
+                        schema: {
+                            fields: ['mediaType']
+                        },
+                        values: {
+                            'banner' : 2
+                        }
                     }
                 }
             })
@@ -93,6 +80,9 @@
                 bidsBackHandler: sendAdserverRequest,
             });
             
+            pbjs.onEvent('auctionInit',function (){
+            	console.log('Bidder Timeout - ',arguments[0].timeout)
+            })
         });
 
         function sendAdserverRequest() {
