@@ -55,42 +55,36 @@
                 bidderTimeout: 3000,
                 realTimeData: {
                     auctionDelay: 500, 
-                    dataProviders: [{
+                    dataProviders: [
+                        {
                         name: 'pubmatic',
                         waitForIt: true,
                         params:{
-                            publisherId: '103207'
+                            publisherId: '103207',
+                            profileId: '12',
+                            floor: true,
+                            enforcement: {
+                                bidAdjustment: true,
+                                enforceJS: false,
+                            }, // (optional)
+                            data: {
+                                currency: "USD",
+                                modelVersion: "default",
+                                schema: { fields: ["gptSlot", "mediaType", "size"] },
+                                values: { "*|banner|*": 1 },
+                            },
                         }
                     }
-                ,
-                {
-                name: 'adagio',
-                params: {
-                    organizationId: '1000', // Required. Provided by Adagio
-                    site: 'my-site', // Required. Provided by Adagio
-                    placementSource: 'ortb' // Optional. Where to find the "placement" value. Possible values: 'ortb'<default> | 'code' | 'gpid'
-                }
-    }]
+                ]
                 },
-                floors: {
-                    enforcement: {
-                        enforceJS: true
-                    },
-                    auctionDelay: 500,
-                    endpoint:{
-                        url: './floors.json'
-                    }
-                }
             })
+
             pbjs.addAdUnits(adUnits);
             pbjs.enableAnalytics({
                     provider: 'pubmatic',
                     options: {
                         "publisherId": 5890 // please contact PubMatic to get a publisherId for yourself
                     }
-            });
-            pbjs.requestBids({
-                bidsBackHandler: sendAdserverRequest,
             });
             
         });
@@ -106,19 +100,33 @@
                 });
             });
         }
-
-        setTimeout(function () {
-            sendAdserverRequest();
-        }, FAILSAFE_TIMEOUT);
     </script>
 
     <script>
         googletag.cmd.push(function () {
             s1 = googletag.defineSlot('/19968336/header-bid-tag-0', [[300, 250], [300, 600]], 'div-gpt-ad-1460505748561-0').addService(googletag.pubads());
-
             googletag.pubads().enableSingleRequest();
             googletag.enableServices();
+
+            pbjs.que.push(function (){
+                pbjs.requestBids({
+                bidsBackHandler: sendAdserverRequest,
+            });
+            })
         });
+
+
+        function sendAdserverRequest() {
+            if (pbjs.adserverRequestSent) return;
+            pbjs.adserverRequestSent = true;
+            googletag.cmd.push(function () {
+                pbjs.que.push(function () {
+                    pbjs.setTargetingForGPTAsync();
+                    googletag.pubads().refresh();
+                    
+                });
+            });
+        }
     </script>
 </head>
 

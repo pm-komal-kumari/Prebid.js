@@ -64,42 +64,35 @@
                 bidderTimeout: 1500,
                 realTimeData : {
                     auctionDelay: 500, 
-                    dataProviders: [{
-                        name: 'pubmatic',
+                    dataProviders: [
+                        {
+                        name: 'timeout',
                         waitForIt: true,
-                        params:{
-                            name : "Komal",
-                            myCustomParam : "myCustomValue",
+                        params: {
+                            rules: {
+                                includesVideo: {
+                                    "true": 200,
+                                    "false": 50
+                                },
+                                numAdUnits : {
+                                    "1-5": 100,
+                                    "6-10": 200,
+                                    "11-15": 300
+                                },
+                                deviceType : {
+                                    "2": 50,
+                                    "4": 100,
+                                    "5": 200
+                                },
+                                connectionSpeed : {
+                                    "slow": 200,
+                                    "medium": 100,
+                                    "fast": 50,
+                                    "unknown": 10
+                                }
+                            }
                         }
-                        },
-                    //     {
-                    //     name: 'timeout',
-                    //     waitForIt: true,
-                    //     params: {
-                    //         rules: {
-                    //             includesVideo: {
-                    //                 "true": 200,
-                    //                 "false": 50
-                    //             },
-                    //             numAdUnits : {
-                    //                 "1-5": 100,
-                    //                 "6-10": 200,
-                    //                 "11-15": 300
-                    //             },
-                    //             deviceType : {
-                    //                 "2": 50,
-                    //                 "4": 100,
-                    //                 "5": 200
-                    //             },
-                    //             connectionSpeed : {
-                    //                 "slow": 200,
-                    //                 "medium": 100,
-                    //                 "fast": 50,
-                    //                 "unknown": 10
-                    //             }
-                    //         }
-                    //     }
-                    // }
+                    }
                 ]
                 }
             })

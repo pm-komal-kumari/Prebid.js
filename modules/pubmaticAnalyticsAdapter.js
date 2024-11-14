@@ -381,6 +381,12 @@ function executeBidsLoggerCall(e, highestCpmBids) {
   let floorFetchStatus = getFloorFetchStatus(auctionCache?.floorData);
   let outputObj = { s: [] };
   let pixelURL = END_POINT_BID_LOGGER;
+  let user = {};
+  
+  if(e.bidderRequests.length > 0){
+    const pubmaticBidderRequest = e.bidderRequests.find((bidder)=> bidder.bidderCode === ADAPTER_CODE);
+    user = pubmaticBidderRequest ? pubmaticBidderRequest.ortb2?.user?.ext : {};
+  }
 
   if (!auctionCache) {
     return;
@@ -406,6 +412,11 @@ function executeBidsLoggerCall(e, highestCpmBids) {
   if (floorData && floorFetchStatus) {
     outputObj['fmv'] = floorData.floorRequestData ? floorData.floorRequestData.modelVersion || undefined : undefined;
     outputObj['ft'] = floorData.floorResponseData ? (floorData.floorResponseData.enforcements.enforceJS == false ? 0 : 1) : undefined;
+  }
+
+  if(user && Object.keys(user).length > 0){
+    outputObj['dvcTyp'] = user.deviceType ? user.deviceType : '';
+    outputObj['tmOfDay'] = user.timeOfDay ? user.timeOfDay : '';
   }
 
   outputObj.s = Object.keys(auctionCache.adUnitCodes).reduce(function(slotsArray, adUnitId) {
