@@ -19,6 +19,8 @@ const REAL_TIME_MODULE = 'realTimeData';
 const SUBMODULE_NAME = 'pubmatic';
 const LOG_PRE_FIX = 'PubMatic-Rtd-Provider: ';
 let isFloorEnabled = true; //default true
+//let timeOfDay = 'evening';
+//let deviceType = 'mobile';
 window.__pubmaticFloorRulesPromise__ = null;
 export const FloorsApiStatus = Object.freeze({
   IN_PROGRESS: 'IN_PROGRESS',
@@ -43,9 +45,10 @@ function getDeviceTypeFromUserAgent(userAgent) {
   // Default to desktop if neither mobile nor tablet matches
   return 'desktop';
 }
-function deviceTypes() {
+function getDeviceType() {
+ // console.log(' In getDeviceType fn -> deviceType ->', deviceType);
+ 
   let deviceType = getDeviceTypeFromUserAgent(navigator.userAgent);
-  //console.log('Pubmatic rtd provider -> In deviceType fn -> deviceType -> ',deviceType);
   if(deviceType == 'mobile')
       return 'mobile'
   else if (deviceType == 'tablet')
@@ -54,7 +57,9 @@ function deviceTypes() {
       return 'desktop'
 }
 
-function timeOfDay(){
+function getTimeOfDay(){
+//  console.log(' In getTimeOfDay fn -> timeOfDay ->', timeOfDay);
+
   const currentHour = new Date().getHours();  // Get the current hour (0-23)
 
   if (currentHour >= 5 && currentHour < 12) {
@@ -84,19 +89,23 @@ function executeDynamicFloors(apiResponse = {}) {
           default : 0.23,
       },
       additionalSchemaFields: {
-        deviceType : deviceTypes,
-        timeOfDay: timeOfDay
+        deviceType : getDeviceType,
+        timeOfDay: getTimeOfDay
       }
     }
     });
 }
 
-export const getFloorsConfig = (provider, floorsResponse) => {
+export const getFloorsConfig = (provider, apiResponse) => {
   const floorsConfig = {
     floors: {
       auctionDelay: 500,
       enforcement: { floorDeals: true },
-      data: floorsResponse,
+      data: apiResponse,
+      additionalSchemaFields: {
+        deviceType : getDeviceType,
+        timeOfDay: getTimeOfDay
+      }
     },
   };
   const { floorMin, enforcement } = deepAccess(provider, 'params');
@@ -133,11 +142,11 @@ export const setDefaultPriceFloors = (provider) => {
 
 const setPriceFloors = async (config) => {
   window.__pubxPrevFloorsConfig__ = conf.getConfig('floors');
-  setDefaultPriceFloors(config);
+  //setDefaultPriceFloors(config); //Setting default floors before API call 
   return fetchFloorRules(config)
-    .then((floorsResponse) => {
+    .then((apiResponse) => {
       console.log('Pubmatic rtd provider -> In setPriceFloors fn -> after fetchFloorRules');
-      setFloorsConfig(config, floorsResponse);
+      setFloorsConfig(config, apiResponse);
       console.log('Pubmatic rtd provider -> In setPriceFloors fn -> after setFloorsConfig -> config.getConfig() -> ',conf.getConfig());
       setFloorsApiStatus(FloorsApiStatus.SUCCESS);
     })
@@ -163,9 +172,13 @@ const fetchFloorRules = async (config) => {
         success: (responseText, response) => {
           try {
             if (response && response.response) {
-              const floorsResponse = JSON.parse(response.response);
-              console.log('Pubmatic rtd provider -> In fetchFloorRules fn -> response', floorsResponse);
-              resolve(floorsResponse);
+              console.log('API Response Timer: In Pubmatic RTD module -> ', Date.now());
+
+              const apiResponse = JSON.parse(response.response);
+              console.log('Pubmatic rtd provider -> In fetchFloorRules fn -> response', apiResponse);
+              // timeOfDay = apiResponse.timeOfDay;
+              // deviceType = apiResponse.deviceType;
+              resolve(apiResponse);
             } else {
               resolve(null);
             }
@@ -188,6 +201,7 @@ const fetchFloorRules = async (config) => {
  * @returns {boolean}
  */
 function init(config, _userConsent) {  
+  console.log('Init fn Timer : In Pubmatic RTD module -> ', Date.now());
   const publisherId = config.params?.publisherId;
   const profileId = config.params?.profileId;
 
@@ -236,6 +250,7 @@ const getBidRequestData = (() => {
       );
       console.log('Pubmatic rtd provider -> In getBidRequestData fn -> inside if (!floorsAttached) -> config.getConfig() -> ',conf.getConfig())
       window.__pubmaticFloorRulesPromise__.then(() => {
+        console.log('ubmatic rtd provider -> In getBidRequestData fn -> reqBidsConfigObj', reqBidsConfigObj);
         createFloorsDataForAuction(
           reqBidsConfigObj.adUnits,
           reqBidsConfigObj.auctionId
@@ -248,8 +263,8 @@ const getBidRequestData = (() => {
             user : {
               ext : {
                 name : 'komal',
-                deviceType : deviceTypes(),
-                timeOfDay : timeOfDay()
+                deviceType : getDeviceType(),
+                timeOfDay : getTimeOfDay()
               }
             }
           }
