@@ -1,5 +1,5 @@
 import { submodule } from '../src/hook.js';
-import { logInfo, logError, mergeDeep, isStr, deepAccess } from '../src/utils.js';
+import { logInfo, logError, mergeDeep, isStr, deepAccess, logMessage, logWarn } from '../src/utils.js';
 import { getGlobal } from '../src/prebidGlobal.js';
 import {config as conf} from '../src/config.js';
 import { ajax } from '../src/ajax.js';
@@ -10,18 +10,30 @@ import { ajax } from '../src/ajax.js';
 
 /**
  * This RTD module has a dependency on the priceFloors module.
- * We utilize the createFloorsDataForAuction function from the priceFloors module to incorporate price floors data into the current auction.
+ * We utilize the continueAuction function from the priceFloors module to incorporate price floors data into the current auction.
  */
-import { createFloorsDataForAuction } from './priceFloors.js'; 
+import { continueAuction } from './priceFloors.js'; 
 
 const BIDDER_CODE = 'pubmatic';
 const REAL_TIME_MODULE = 'realTimeData';
 const SUBMODULE_NAME = 'pubmatic';
 const LOG_PRE_FIX = 'PubMatic-Rtd-Provider: ';
+const GVL_ID = 76;
+const TCF_PURPOSES = [1, 7]
+
+
+
 let isFloorEnabled = true; //default true
-//let timeOfDay = 'evening';
-//let deviceType = 'mobile';
+let _timeOfDay = 'evening';
+let _deviceType = 'mobile';
+let _country = 'Australia';
+let _region = 'Delhi';
+let _browser = 'Chrome';
+let _os = 'Android';
+let _utm = '0';
+
 window.__pubmaticFloorRulesPromise__ = null;
+window.__pubmaticGeolocationPromise__ = null;
 export const FloorsApiStatus = Object.freeze({
   IN_PROGRESS: 'IN_PROGRESS',
   SUCCESS: 'SUCCESS',
@@ -45,83 +57,143 @@ function getDeviceTypeFromUserAgent(userAgent) {
   // Default to desktop if neither mobile nor tablet matches
   return 'desktop';
 }
+
+function getBrowserFromUserAgent(userAgent) {
+  if (/firefox\/\d+/i.test(userAgent)) {
+    return "Firefox";
+  } else if (/chrome\/\d+/i.test(userAgent) && !/edg\//i.test(userAgent)) {
+      return "Chrome";
+  } else if (/safari\/\d+/i.test(userAgent) && !/chrome\/\d+/i.test(userAgent)) {
+      return "Safari";
+  } else if (/edg\/\d+/i.test(userAgent)) {
+      return "Edge";
+  } else if (/msie \d+/i.test(userAgent) || /trident\/\d+/i.test(userAgent)) {
+      return "Internet Explorer";
+  }
+}
+
+function getOsFromUserAgent(userAgent) {
+  if (/windows nt \d+/i.test(userAgent)) {
+    return "Windows";
+  } else if (/mac os x/i.test(userAgent)) {
+    return "MacOS";
+  } else if (/android/i.test(userAgent)) {
+    return "Android";
+  } else if (/linux/i.test(userAgent)) {
+    return "Linux";
+  } else if (/iphone|ipad|ipod/i.test(userAgent)) {
+    return "iOS";
+  }
+}
+
+function getBrowser(){
+  return _browser;
+}
+
+function setBrowser(){
+  let browser = getBrowserFromUserAgent(navigator.userAgent);
+  _browser = browser;
+}
+
+function getOs(){
+  return _os;
+}
+
+function setOs() {
+  let os = getOsFromUserAgent(navigator.userAgent);
+  _os = os;
+}
+
 function getDeviceType() {
- // console.log(' In getDeviceType fn -> deviceType ->', deviceType);
+ return _deviceType;
  
-  let deviceType = getDeviceTypeFromUserAgent(navigator.userAgent);
-  if(deviceType == 'mobile')
-      return 'mobile'
-  else if (deviceType == 'tablet')
-      return 'tablet'
-  else if (deviceType == 'desktop')
-      return 'desktop'
+  // let deviceType = getDeviceTypeFromUserAgent(navigator.userAgent);
+  // if(deviceType == 'mobile')
+  //     return 'mobile'
+  // else if (deviceType == 'tablet')
+  //     return 'tablet'
+  // else if (deviceType == 'desktop')
+  //     return 'desktop'
+}
+
+function setDeviceType(value){
+  _deviceType = value;
 }
 
 function getTimeOfDay(){
-//  console.log(' In getTimeOfDay fn -> timeOfDay ->', timeOfDay);
+return _timeOfDay;
 
-  const currentHour = new Date().getHours();  // Get the current hour (0-23)
+  // const currentHour = new Date().getHours();  // Get the current hour (0-23)
 
-  if (currentHour >= 5 && currentHour < 12) {
-    return 'morning';
-  } else if (currentHour >= 12 && currentHour < 17) {
-    return 'afternoon';
-  } else if (currentHour >= 17 && currentHour < 19) {
-    return 'evening';
-  } else {
-    return 'night';
-  }
+  // if (currentHour >= 5 && currentHour < 12) {
+  //   return 'morning';
+  // } else if (currentHour >= 12 && currentHour < 17) {
+  //   return 'afternoon';
+  // } else if (currentHour >= 17 && currentHour < 19) {
+  //   return 'evening';
+  // } else {
+  //   return 'night';
+  // }
 }
 
-function executeDynamicFloors(apiResponse = {}) {
-  const globalConfig = conf.getConfig();
+function setTimeOfDay(value){
+  _timeOfDay = value;
+}
 
-  conf.mergeConfig({
-      floors: {
-        enforcement: {
-          enforceJS: true
-      },
-      auctionDelay: 500,
-      endpoint:{
-          url: './floors.json'
-      },
-      data : {
-          default : 0.23,
-      },
-      additionalSchemaFields: {
-        deviceType : getDeviceType,
-        timeOfDay: getTimeOfDay
-      }
-    }
-    });
+function getCountry(){
+  return _country;
+}
+
+function setCountry(value){
+ _country = value;
+}
+
+function getRegion(){
+  return _region;
+}
+
+function setRegion(value){
+ _region = value;
+}
+
+function getBidder(bidderDetail){
+  return bidderDetail?.bidder;
+}
+
+function getUtm(){
+  return _utm;
+}
+
+function setUtm(url){
+  const queryString = url?.split('?')[1];
+  _utm = queryString.includes('utm') ? '1' : '0';
 }
 
 export const getFloorsConfig = (provider, apiResponse) => {
+  const floor = apiResponse.floor;
   const floorsConfig = {
     floors: {
-      auctionDelay: 500,
-      enforcement: { floorDeals: true },
-      data: apiResponse,
+      ...floor,
       additionalSchemaFields: {
         deviceType : getDeviceType,
-        timeOfDay: getTimeOfDay
+        timeOfDay: getTimeOfDay,
+        country: getCountry,
+        region: getRegion,
+        browser: getBrowser,
+        os: getOs,
+        bidder: getBidder,
+        utm: getUtm
       }
     },
   };
-  const { floorMin, enforcement } = deepAccess(provider, 'params');
-  if (floorMin) {
-    floorsConfig.floors.floorMin = floorMin;
-  }
-  if (enforcement) {
-    floorsConfig.floors.enforcement = enforcement;
-  }
+
+  console.log('In pubmaticRTDProvider -> In getFloorsConfig -> floors data -> ',floorsConfig);
   return floorsConfig;
 };
 
 export const setFloorsConfig = (provider, data) => {
   if (data) {
     const floorsConfig = getFloorsConfig(provider, data);
-    console.log('In pubmaticRTDProvider -> In setFloorsConfig -> floors data -> ',floorsConfig);
     conf.setConfig(floorsConfig);
     window.__pubmaticLoaded__ = true;
     window.__pubmaticFloorsConfig__ = floorsConfig;
@@ -175,9 +247,11 @@ const fetchFloorRules = async (config) => {
               console.log('API Response Timer: In Pubmatic RTD module -> ', Date.now());
 
               const apiResponse = JSON.parse(response.response);
+              setTimeOfDay(apiResponse?.userContext?.timeOfDay);
+              setDeviceType(apiResponse?.userContext?.deviceType);
+              //setCountry(apiResponse?.userContext?.country); // Setting from GEO API
+              setRegion(apiResponse?.userContext?.region);
               console.log('Pubmatic rtd provider -> In fetchFloorRules fn -> response', apiResponse);
-              // timeOfDay = apiResponse.timeOfDay;
-              // deviceType = apiResponse.deviceType;
               resolve(apiResponse);
             } else {
               resolve(null);
@@ -194,14 +268,83 @@ const fetchFloorRules = async (config) => {
   });
 };
 
+const getGeolocation = async () =>{
+  return new Promise((resolve, reject) => {
+    const url = 'https://ut.pubmatic.com/geo?pubid=5890';
+    if (url) {
+      ajax(url, {
+        success: (response) => {
+          try {
+            if (response) {
+              const apiResponse = JSON.parse(response);
+              setCountry(apiResponse.cc);
+              resolve(apiResponse.cc);
+            } else {
+              logWarn(LOG_PRE_FIX,'No response from geolocation API');
+              resolve(null);
+            }
+          } catch (error) {
+            logError(LOG_PRE_FIX,'Error geolocation API - ', error);
+            reject(error);
+          }
+        },
+        error: (response) => {
+          logError(LOG_PRE_FIX,'Error geolocation API - ', response);
+          reject(response);
+        },
+      });
+    }
+  }); 
+}
+
 /**
- * Initialize the Adagio RTD Module.
+ * Checks TCF and USP consents
+ * @param {Object} userConsent
+ * @returns {boolean}
+ */
+function checkConsent (userConsent) {
+  let consent
+
+  if (userConsent) {
+    if (userConsent.gdpr && userConsent.gdpr.gdprApplies) {
+      const gdpr = userConsent.gdpr
+
+      if (gdpr.vendorData) {
+        const vendor = gdpr.vendorData.vendor
+        const purpose = gdpr.vendorData.purpose
+
+        let vendorConsent = false
+        if (vendor.consents) {
+          vendorConsent = vendor.consents[GVL_ID]
+        }
+
+        if (vendor.legitimateInterests) {
+          vendorConsent = vendorConsent || vendor.legitimateInterests[GVL_ID]
+        }
+
+        const purposes = TCF_PURPOSES.map(id => {
+          return (purpose.consents && purpose.consents[id]) || (purpose.legitimateInterests && purpose.legitimateInterests[id])
+        })
+        const purposesValid = purposes.filter(p => p === true).length === TCF_PURPOSES.length
+        consent = vendorConsent && purposesValid
+      }
+    } else if (userConsent.usp) {
+      const usp = userConsent.usp
+      consent = usp[1] !== 'N' && usp[2] !== 'Y'
+    }
+  }
+
+  return consent
+}
+
+
+/**
+ * Initialize the Pubmatic RTD Module.
  * @param {Object} config
  * @param {Object} _userConsent
  * @returns {boolean}
  */
 function init(config, _userConsent) {  
-  console.log('Init fn Timer : In Pubmatic RTD module -> ', Date.now());
   const publisherId = config.params?.publisherId;
   const profileId = config.params?.profileId;
 
@@ -225,9 +368,12 @@ function init(config, _userConsent) {
     return false;
   }
 
-  console.log('Pubmatic rtd provider -> In init fn')
+ //CODE : FOR RTD WITHOUT CMP
   window.__pubmaticFloorRulesPromise__ = setPriceFloors(config);
-  console.log('Pubmatic rtd provider -> In init fn -> window.__pubmaticFloorRulesPromise__', window.__pubmaticFloorRulesPromise__);
+  getGeolocation();
+  setBrowser();
+  setOs();
+  setUtm(window.location?.href);
   return true;
 }
 
@@ -238,41 +384,67 @@ function init(config, _userConsent) {
  * @param {Object} userConsent
  */
 
+
+//CODE : FOR RTD WITH CMP
+// function getBidRequestData(reqBidsConfigObj, onDone, config, userConsent) {
+//   console.log('IN Pubmatic RTD -> getBidRequestData fn -> user consent ', userConsent);
+
+//   //check user consent 
+//   const hasConsent = checkConsent(userConsent)
+//   const initialize = hasConsent !== false
+
+// console.log('IN Pubmatic RTD -> getBidRequestData fn -> hasConsent ', hasConsent);
+// if(initialize){
+//   window.__pubmaticFloorRulesPromise__ = setPriceFloors(config);
+//   window.__pubmaticGeolocationPromise__ = getGeolocation();
+//   Promise.allSettled([window.__pubmaticFloorRulesPromise__,window.__pubmaticGeolocationPromise__]).then(() => {
+//   console.log('ubmatic rtd provider -> In getBidRequestData fn -> reqBidsConfigObj', reqBidsConfigObj);
+//   const hookConfig = {
+//     reqBidsConfigObj,
+//     context: this,
+//     nextFn: ()=> true,
+//     haveExited: false,
+//     timer: null
+//   };
+//   continueAuction(hookConfig);
+//   onDone();
+// });
+// }
+  
+// }
+
+//CODE : FOR RTD WITHOUT CMP
 const getBidRequestData = (() => {
   console.log('Pubmatic rtd provider -> In getBidRequestData fn -> is floorAttached ->', floorsAttached);
   let floorsAttached = false;
   return (reqBidsConfigObj, onDone) => {
     if (!floorsAttached) {
-    console.log('Pubmatic rtd provider -> In getBidRequestData fn -> inside if (!floorsAttached)');
-      createFloorsDataForAuction(
-        reqBidsConfigObj.adUnits,
-        reqBidsConfigObj.auctionId
-      );
-      console.log('Pubmatic rtd provider -> In getBidRequestData fn -> inside if (!floorsAttached) -> config.getConfig() -> ',conf.getConfig())
       window.__pubmaticFloorRulesPromise__.then(() => {
         console.log('ubmatic rtd provider -> In getBidRequestData fn -> reqBidsConfigObj', reqBidsConfigObj);
-        createFloorsDataForAuction(
-          reqBidsConfigObj.adUnits,
-          reqBidsConfigObj.auctionId
-        );
-        console.log('Pubmatic rtd provider -> Inside getBidRequestData fn -> window.__pubmaticFloorRulesPromise__', window.__pubmaticFloorRulesPromise__);
-       
+        const hookConfig = {
+          reqBidsConfigObj,
+          context: this,
+          nextFn: ()=> true,
+          haveExited: false,
+          timer: null
+        };
+        continueAuction(hookConfig);
         //set ortb.bidders
-        if(isFloorEnabled){
-          const Ortb2 = {
-            user : {
-              ext : {
-                name : 'komal',
-                deviceType : getDeviceType(),
-                timeOfDay : getTimeOfDay()
-              }
-            }
-          }
+        // if(isFloorEnabled){
+        //   const Ortb2 = {
+        //     user : {
+        //       ext : {
+        //         name : 'komal',
+        //         deviceType : getDeviceType(),
+        //         timeOfDay : getTimeOfDay()
+        //       }
+        //     }
+        //   }
       
-          mergeDeep(reqBidsConfigObj.ortb2Fragments.bidder, {
-            [BIDDER_CODE] : Ortb2
-          });
-        }
+        //   mergeDeep(reqBidsConfigObj.ortb2Fragments.bidder, {
+        //     [BIDDER_CODE] : Ortb2
+        //   });
+        // }
         onDone();
       });
 

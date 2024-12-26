@@ -1,6 +1,21 @@
 <html>
 
 <head>
+    <script charset="UTF-8" src="https://cdn.cookielaw.org/consent/tcf.stub.js" type="text/javascript"></script>
+    <!-- OneTrust Cookies Consent Notice start for ebayuk.com -->
+    <script charset="UTF-8" data-domain-script="b443f6b6-1ca0-407a-ad2b-867cfb80f233"
+            src="https://cdn.cookielaw.org/scripttemplates/otSDKStub.js"
+            type="text/javascript"></script>
+    <script type="text/javascript">
+	function OptanonWrapper() { }
+
+
+
+
+    </script>
+    <!-- OneTrust Cookies Consent Notice end for ebayuk.com -->
+    <meta content="text/html; charset=utf-8" http-equiv="Content-type">
+
   <script async src="../../build/dev/prebid.js"></script>
     <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
     <script>
@@ -78,6 +93,13 @@
                 enableSendAllBids : true,
                 enableTIDs: true,
                 bidderTimeout: 3000,
+                consentManagement: {
+                   gdpr: {
+                    cmpApi: 'iab',
+                    allowAuctionWithoutConsent: false, // suppress auctions if there's no GDPR consent string
+                    timeout: 10000  // GDPR timeout 10000ms
+                   }
+                },
                 realTimeData: {
                     auctionDelay: 500, 
                     dataProviders: [
@@ -99,6 +121,9 @@
                 floors:{
                     enforcement: {
                         enforceJS: false
+                    },
+                    endpoint : {
+                        url: 'https://ads.pubmatic.com/AdServer/js/pwt/floors/160547/3819/floors.json'
                     },
                     data: {   
                         currency: 'USD',

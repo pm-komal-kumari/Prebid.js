@@ -4,42 +4,37 @@
 	"floorsSchemaVersion": 2,
 	"modelGroups": [
 		{
-            "modelWeight": 100,
+            "modelWeight": 80,
+            "modelVersion": "local floors json",
             "schema": {
               "fields": [
-                "mediaType","deviceType","timeOfDay"
+                "mediaType","domain"
               ]
             },
             "values": {
-              "banner|mobile|morning": 2,
-              "banner|mobile|afternoon": 1,
-              "banner|mobile|evening": 1.5,
-              "banner|mobile|night": 15,
-              "banner|desktop|morning": 5,
-              "banner|desktop|afternoon": 0.8,
-              "banner|desktop|evening": 0.20,
-              "banner|desktop|night": 1.2,
-              "banner|desktop|*": 10
+              "banner|localhost": 2,
+              "video|localhost": 1,
+              "banner|*": 10
             },
             "default" : 0.9
           }
           ,
           {
-            "modelWeight": 0,
+            "modelWeight": 10,
             "schema": {
               "fields": [
-                "mediaType","deviceType"
+                "mediaType","size"
               ]
             },
             "values": {
-              "banner|mobile": 2,
-              "banner|desktop": 5
+              "banner|300x250": 2,
+              "banner|728x90": 5
             },
             "default" : 0.7
           }
           ,
 		  {
-			"modelWeight": 0,
+			"modelWeight": 10,
 			"schema": {
 			  "fields": [
 				"mediaType"

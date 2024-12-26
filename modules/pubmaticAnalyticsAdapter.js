@@ -415,8 +415,8 @@ function executeBidsLoggerCall(e, highestCpmBids) {
   }
 
   if(user && Object.keys(user).length > 0){
-    outputObj['dvcTyp'] = user.deviceType ? user.deviceType : '';
-    outputObj['tmOfDay'] = user.timeOfDay ? user.timeOfDay : '';
+    outputObj['dvctyp'] = user.deviceType ? user.deviceType : '';
+    outputObj['tmofday'] = user.timeOfDay ? user.timeOfDay : '';
   }
 
   outputObj.s = Object.keys(auctionCache.adUnitCodes).reduce(function(slotsArray, adUnitId) {
