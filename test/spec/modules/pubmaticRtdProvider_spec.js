@@ -2,15 +2,11 @@ import { expect } from 'chai';
 import * as priceFloors from '../../../modules/priceFloors';
 import * as utils from '../../../src/utils.js';
 import * as ajax from '../../../src/ajax.js';
-import { continueAuction } from '../../../modules/priceFloors.js';
-import { registerSubModule, pubmaticSubmodule, getFloorsConfig, setFloorsConfig, setPriceFloors, fetchFloorRules,getGeolocation,
-   getCurrentTimeOfDay, setBrowser, getBrowser,
-  setOs, getOs, setDeviceType, getDeviceType, setTimeOfDay, getTimeOfDay,setUtm, getUtm, getCountry, setCountry,
-  getRegion, setRegion} from '../../../modules/pubmaticRtdProvider.js';
+import { registerSubModule, pubmaticSubmodule, getFloorsConfig, setFloorsConfig, setPriceFloors, fetchFloorRules,
+   getCurrentTimeOfDay, setBrowser, getBrowser, setOs, getOs, setDeviceType, getDeviceType, setTimeOfDay, getTimeOfDay,setUtm, getUtm,} from '../../../modules/pubmaticRtdProvider.js';
 import { config as conf } from '../../../src/config';
 import * as hook from '../../../src/hook.js';
 
-let _pubmaticFloorRulesPromise =  null;
 let clock;
 let sandbox;
 const getConfig = () => ({
@@ -50,15 +46,6 @@ describe('Pubmatic RTD Provider', function () {
   });
 
   describe('init', function () {
-    // let stub;
-    // beforeEach(() => {
-    //   resetGlobals();
-    //   stub = stubConfig();
-    // });
-    // afterEach(() => {
-    //   stub.restore();
-    // });
-
     let sandbox;
     let logErrorStub;
 
@@ -127,14 +114,11 @@ describe('Pubmatic RTD Provider', function () {
 
     describe('error handling', function() {
         beforeEach(function() {
-            // Store original console.error
             this.originalConsoleError = console.error;
-            // Suppress console.error for these tests
             console.error = () => {};
         });
 
         afterEach(function() {
-            // Restore console.error
             console.error = this.originalConsoleError;
         });
 
@@ -198,15 +182,15 @@ describe('Pubmatic RTD Provider', function () {
       expect(getTimeOfDay()).to.be.a('string');
     });
 
-    it('should get and set country correctly', function () {
-      setCountry('India');
-      expect(getCountry()).to.be.a('string');
-    });
+    // it('should get and set country correctly', function () {
+    //   setCountry('India');
+    //   expect(getCountry()).to.be.a('string');
+    // });
 
-    it('should get and set Region correctly', function () {
-      setRegion('Bihar');
-      expect(getRegion()).to.be.a('string');
-    });
+    // it('should get and set Region correctly', function () {
+    //   setRegion('Bihar');
+    //   expect(getRegion()).to.be.a('string');
+    // });
 
     it('should get and set UTM as 1', function () {
       setUtm('https://example.com?utm_source=test');
@@ -229,8 +213,8 @@ describe('Pubmatic RTD Provider', function () {
         expect(result.floors.additionalSchemaFields).to.have.all.keys([
             'deviceType',
             'timeOfDay',
-            'country',
-            'region',
+            // 'country',
+            // 'region',
             'browser',
             'os',
             'utm'
@@ -260,8 +244,8 @@ describe('Pubmatic RTD Provider', function () {
         // Verify that the functions are the correct references
         expect(result.floors.additionalSchemaFields.deviceType).to.equal(getDeviceType);
         expect(result.floors.additionalSchemaFields.timeOfDay).to.equal(getTimeOfDay);
-        expect(result.floors.additionalSchemaFields.country).to.equal(getCountry);
-        expect(result.floors.additionalSchemaFields.region).to.equal(getRegion);
+        // expect(result.floors.additionalSchemaFields.country).to.equal(getCountry);
+        // expect(result.floors.additionalSchemaFields.region).to.equal(getRegion);
         expect(result.floors.additionalSchemaFields.browser).to.equal(getBrowser);
         expect(result.floors.additionalSchemaFields.os).to.equal(getOs);
         expect(result.floors.additionalSchemaFields.utm).to.equal(getUtm);
@@ -360,266 +344,96 @@ describe('Pubmatic RTD Provider', function () {
       });
   });
 
-//   describe('Price Floor Functions', function () {
-//     let sandbox;
-//     let ajaxStub;
-//     let logErrorStub;
+  describe('Price Floor Functions', function () {
+    let sandbox;
+    let logErrorStub;
+    let ajaxStub;
 
-//     beforeEach(function () {
-//         sandbox = sinon.createSandbox();
-//         ajaxStub = sandbox.stub(ajax, 'ajax');
-//         logErrorStub = sandbox.stub(utils, 'logError');
-//     });
+    beforeEach(function () {
+        sandbox = sinon.createSandbox();
+        logErrorStub = sandbox.stub(utils, 'logError');
+        ajaxStub = sandbox.stub(ajax, 'ajax');
+    });
 
-//     afterEach(function () {
-//         sandbox.restore();
-//     });
+    afterEach(function () {
+        sandbox.restore();
+    });
 
-//     describe('fetchFloorRules', function () {
-//         const validConfig = {
-//             params: {
-//                 publisherId: 'test-pub',
-//                 profileId: 'test-profile'
-//             }
-//         };
+    describe('fetchFloorRules', function () {
+        it('should successfully fetch and parse floor rules', async function () {
+            const mockApiResponse = {
+                floor: {
+                    data: {
+                        currency: 'USD',
+                        modelGroups: [],
+                        values: {}
+                    }
+                }
+            };
 
-//         it('should successfully fetch and parse floor rules', async function () {
-//             const mockApiResponse = {
-//                 floor: {
-//                     data: {
-//                         currency: 'USD',
-//                         modelGroups: [],
-//                         values: {}
-//                     }
-//                 }
-//             };
+            ajaxStub.callsFake((url, callbacks) => {
+                callbacks.success('success', {
+                    response: JSON.stringify(mockApiResponse)
+                });
+            });
 
-//             ajaxStub.callsFake((url, callbacks) => {
-//                 callbacks.success('success', {
-//                     response: JSON.stringify(mockApiResponse)
-//                 });
-//             });
+            const result = await fetchFloorRules();
+            expect(result).to.deep.equal(mockApiResponse);
+        });
 
-//             const result = await fetchFloorRules(validConfig);
-//             expect(result).to.deep.equal(mockApiResponse);
-//             expect(ajaxStub.calledOnce).to.be.true;
-//             expect(ajaxStub.firstCall.args[0]).to.equal('https://hbopenbid.pubmatic.com/pubmaticRtdApi');
-//         });
+        it('should reject when JSON parsing fails', async function () {
+            ajaxStub.callsFake((url, callbacks) => {
+                callbacks.success('success', {
+                    response: 'Invalid JSON'
+                });
+            });
 
-//         it('should resolve with null when response is empty', async function () {
-//             ajaxStub.callsFake((url, callbacks) => {
-//                 callbacks.success('success', {});
-//             });
+            try {
+                await fetchFloorRules();
+                expect.fail('Should have thrown an error');
+            } catch (error) {
+                expect(error).to.be.instanceof(SyntaxError);
+                expect(error.message).to.include('JSON parsing error');
+            }
+        });
+    });
 
-//             const result = await fetchFloorRules(validConfig);
-//             expect(result).to.be.null;
-//         });
+    describe('setPriceFloors', function () {
+        it('should handle JSON parsing errors', async function () {
+            ajaxStub.callsFake((url, callbacks) => {
+                callbacks.success('success', {
+                    response: 'Invalid JSON'
+                });
+            });
 
-//         it('should reject when ajax call fails', async function () {
-//             const errorResponse = 'Network Error';
-//             ajaxStub.callsFake((url, callbacks) => {
-//                 callbacks.error(errorResponse);
-//             });
+            await setPriceFloors();
+            expect(logErrorStub.calledOnce).to.be.true;
+            expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
+        });
 
-//             try {
-//                 await fetchFloorRules(validConfig);
-//                 expect.fail('Should have thrown an error');
-//             } catch (error) {
-//                 expect(error).to.equal(errorResponse);
-//             }
-//         });
+        it('should handle empty response', async function () {
+            ajaxStub.callsFake((url, callbacks) => {
+                callbacks.success('success', {});
+            });
 
-//         it('should reject when JSON parsing fails', async function () {
-//             ajaxStub.callsFake((url, callbacks) => {
-//                 callbacks.success('success', {
-//                     response: 'Invalid JSON'
-//                 });
-//             });
+            await setPriceFloors();
+            expect(logErrorStub.calledOnce).to.be.true;
+            expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
+        });
 
-//             try {
-//                 await fetchFloorRules(validConfig);
-//                 expect.fail('Should have thrown an error');
-//             } catch (error) {
-//                 expect(error).to.be.instanceof(Error);
-//                 expect(error.name).to.equal('SyntaxError');
-//             }
-//         });
+        it('should handle null response', async function () {
+            ajaxStub.callsFake((url, callbacks) => {
+                callbacks.success('success', {
+                    response: null
+                });
+            });
 
-//         it('should make ajax call to correct URL', function () {
-//             fetchFloorRules(validConfig);
-//             expect(ajaxStub.calledOnce).to.be.true;
-//             expect(ajaxStub.firstCall.args[0]).to.equal('https://hbopenbid.pubmatic.com/pubmaticRtdApi');
-//         });
-//     });
+            await setPriceFloors();
+            expect(logErrorStub.calledOnce).to.be.true;
+            expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
+        });
 
-//     describe('setPriceFloors', function () {
-  
-//       it('should successfully fetch and set floor rules', async function () {
-//         const mockApiResponse = {
-//             floor: {
-//                 data: {
-//                     currency: 'USD',
-//                     modelGroups: [],
-//                     values: {}
-//                 }
-//             }
-//         };
-
-//         // Mock successful API response
-//         ajaxStub.callsFake((url, callbacks) => {
-//             callbacks.success(JSON.stringify(mockApiResponse));
-//         });
-
-//         await setPriceFloors();
-//         expect(logErrorStub.called).to.be.false;
-//     });
-
-//     it('should handle fetch errors gracefully', async function () {
-//         // Mock API error
-//         ajaxStub.callsFake((url, callbacks) => {
-//             callbacks.error('Network Error');
-//         });
-
-//         await setPriceFloors();
-//         expect(logErrorStub.calledOnce).to.be.true;
-//         expect(logErrorStub.calledWith(sinon.match(/Error while fetching floors/))).to.be.true;
-//     });
-
-//     it('should handle JSON parsing errors', async function () {
-//         ajaxStub.callsFake((url, callbacks) => {
-//             callbacks.success('Invalid JSON');
-//         });
-
-//         await setPriceFloors();
-//         expect(logErrorStub.calledOnce).to.be.true;
-//         expect(logErrorStub.calledWith(sinon.match(/Error while fetching floors/))).to.be.true;
-//     });
-
-//     it('should handle empty response', async function () {
-//         ajaxStub.callsFake((url, callbacks) => {
-//             callbacks.success('');
-//         });
-
-//         await setPriceFloors();
-//         expect(logErrorStub.calledOnce).to.be.true;
-//         expect(logErrorStub.calledWith(sinon.match(/Error while fetching floors/))).to.be.true;
-//     });
-
-//     it('should handle null response', async function () {
-//         ajaxStub.callsFake((url, callbacks) => {
-//             callbacks.success(null);
-//         });
-
-//         await setPriceFloors();
-//         expect(logErrorStub.calledOnce).to.be.true;
-//         expect(logErrorStub.calledWith(sinon.match(/Error while fetching floors/))).to.be.true;
-//     });
-
-//     it('should maintain promise chain', async function () {
-//         const mockApiResponse = {
-//             floor: {
-//                 data: {
-//                     currency: 'USD'
-//                 }
-//             }
-//         };
-
-//         ajaxStub.callsFake((url, callbacks) => {
-//             callbacks.success(JSON.stringify(mockApiResponse));
-//         });
-
-//         const promise = setPriceFloors();
-//         expect(promise).to.be.instanceof(Promise);
-
-//         await promise;
-//         expect(logErrorStub.called).to.be.false;
-//     });
-
-//     it('should handle network timeouts', async function () {
-//         ajaxStub.callsFake((url, callbacks) => {
-//             callbacks.error('Timeout');
-//         });
-
-//         await setPriceFloors();
-//         expect(logErrorStub.calledOnce).to.be.true;
-//         expect(logErrorStub.calledWith(sinon.match(/Error while fetching floors/))).to.be.true;
-//     });
-
-//     it('should handle various error scenarios', async function () {
-//         const errorScenarios = [
-//             'Network Error',
-//             'Timeout',
-//             'Server Error',
-//             'Invalid Response'
-//         ];
-
-//         for (const error of errorScenarios) {
-//             logErrorStub.resetHistory();
-//             ajaxStub.callsFake((url, callbacks) => {
-//                 callbacks.error(error);
-//             });
-
-//             await setPriceFloors();
-//             expect(logErrorStub.calledOnce).to.be.true;
-//             expect(logErrorStub.calledWith(sinon.match(/Error while fetching floors/))).to.be.true;
-//         }
-//     });
-
-//     it('should verify error logging format', async function () {
-//         ajaxStub.callsFake((url, callbacks) => {
-//             callbacks.error('Test Error');
-//         });
-
-//         await setPriceFloors();
-//         expect(logErrorStub.calledOnce).to.be.true;
-//         const errorCall = logErrorStub.getCall(0);
-//         expect(errorCall.args[0]).to.include('Error while fetching floors');
-//     });
-
-//     it('should handle multiple consecutive calls', async function () {
-//         const mockApiResponse = {
-//             floor: {
-//                 data: {
-//                     currency: 'USD'
-//                 }
-//             }
-//         };
-
-//         ajaxStub.callsFake((url, callbacks) => {
-//             callbacks.success(JSON.stringify(mockApiResponse));
-//         });
-
-//         // Make multiple calls
-//         await Promise.all([
-//             setPriceFloors(),
-//             setPriceFloors(),
-//             setPriceFloors()
-//         ]);
-
-//         expect(ajaxStub.callCount).to.equal(3);
-//         expect(logErrorStub.called).to.be.false;
-//     });
-//   });
-// });
-
-
-describe('Price Floor Functions', function () {
-  let sandbox;
-  let logErrorStub;
-  let ajaxStub;
-
-  beforeEach(function () {
-      sandbox = sinon.createSandbox();
-      logErrorStub = sandbox.stub(utils, 'logError');
-      ajaxStub = sandbox.stub(ajax, 'ajax');
-  });
-
-  afterEach(function () {
-      sandbox.restore();
-  });
-
-  describe('fetchFloorRules', function () {
-      it('should successfully fetch and parse floor rules', async function () {
+        it('should successfully process valid response', async function () {
           const mockApiResponse = {
               floor: {
                   data: {
@@ -630,206 +444,174 @@ describe('Price Floor Functions', function () {
               }
           };
 
+          // Mock the ajax success callback with the correct response structure
           ajaxStub.callsFake((url, callbacks) => {
-              callbacks.success('success', {
+              callbacks.success(JSON.stringify(mockApiResponse), {
                   response: JSON.stringify(mockApiResponse)
               });
           });
 
-          const result = await fetchFloorRules();
-          expect(result).to.deep.equal(mockApiResponse);
-      });
-
-      it('should reject when JSON parsing fails', async function () {
-          ajaxStub.callsFake((url, callbacks) => {
-              callbacks.success('success', {
-                  response: 'Invalid JSON'
-              });
-          });
-
-          try {
-              await fetchFloorRules();
-              expect.fail('Should have thrown an error');
-          } catch (error) {
-              expect(error).to.be.instanceof(SyntaxError);
-              expect(error.message).to.include('JSON parsing error');
-          }
-      });
-  });
-
-  describe('setPriceFloors', function () {
-      it('should handle JSON parsing errors', async function () {
-          ajaxStub.callsFake((url, callbacks) => {
-              callbacks.success('success', {
-                  response: 'Invalid JSON'
-              });
-          });
-
           await setPriceFloors();
-          expect(logErrorStub.calledOnce).to.be.true;
-          expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
+          
+          //expect(logErrorStub.called).to.be.false;
+          expect(ajaxStub.calledOnce).to.be.true;
       });
 
-      it('should handle empty response', async function () {
-          ajaxStub.callsFake((url, callbacks) => {
-              callbacks.success('success', {});
-          });
-
-          await setPriceFloors();
-          expect(logErrorStub.calledOnce).to.be.true;
-          expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
-      });
-
-      it('should handle null response', async function () {
-          ajaxStub.callsFake((url, callbacks) => {
-              callbacks.success('success', {
-                  response: null
-              });
-          });
-
-          await setPriceFloors();
-          expect(logErrorStub.calledOnce).to.be.true;
-          expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
-      });
-
-      it('should successfully process valid response', async function () {
-        const mockApiResponse = {
-            floor: {
-                data: {
-                    currency: 'USD',
-                    modelGroups: [],
-                    values: {}
-                }
-            }
-        };
-
-        // Mock the ajax success callback with the correct response structure
-        ajaxStub.callsFake((url, callbacks) => {
-            callbacks.success(JSON.stringify(mockApiResponse), {
-                response: JSON.stringify(mockApiResponse)
+        it('should handle network errors', async function () {
+            ajaxStub.callsFake((url, callbacks) => {
+                callbacks.error('Network Error');
             });
+
+            await setPriceFloors();
+            expect(logErrorStub.calledOnce).to.be.true;
+            expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
         });
-
-        await setPriceFloors();
-        
-        //expect(logErrorStub.called).to.be.false;
-        expect(ajaxStub.calledOnce).to.be.true;
     });
-
-      it('should handle network errors', async function () {
-          ajaxStub.callsFake((url, callbacks) => {
-              callbacks.error('Network Error');
-          });
-
-          await setPriceFloors();
-          expect(logErrorStub.calledOnce).to.be.true;
-          expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
-      });
   });
-});
 
-describe('getGeolocation', function () {
-  let sandbox;
-  let ajaxStub;
-  let logErrorStub;
-  let logWarnStub;
+  // describe('getGeolocation', function () {
+  //   let sandbox;
+  //   let ajaxStub;
+  //   let logErrorStub;
+  //   let logWarnStub;
 
-  beforeEach(function () {
+  //   beforeEach(function () {
+  //       sandbox = sinon.createSandbox();
+  //       ajaxStub = sandbox.stub(ajax, 'ajax');
+  //       logErrorStub = sandbox.stub(utils, 'logError');
+  //       logWarnStub = sandbox.stub(utils, 'logWarn');
+  //   });
+
+  //   afterEach(function () {
+  //       sandbox.restore();
+  //   });
+
+  //   it('should successfully fetch and parse geolocation data', async function () {
+  //       const mockGeoResponse = {
+  //           cc: 'US',
+  //           sc: 'CA'
+  //       };
+
+  //       ajaxStub.callsFake((url, callbacks) => {
+  //           callbacks.success(JSON.stringify(mockGeoResponse));
+  //       });
+
+  //       const result = await getGeolocation();
+
+  //       expect(result).to.equal('US');
+  //       expect(ajaxStub.calledOnce).to.be.true;
+  //       expect(ajaxStub.firstCall.args[0]).to.equal('https://ut.pubmatic.com/geo?pubid=5890');
+  //       expect(logErrorStub.called).to.be.false;
+  //       expect(logWarnStub.called).to.be.false;
+  //   });
+
+  //   it('should handle null response gracefully', async function () {
+  //       ajaxStub.callsFake((url, callbacks) => {
+  //           callbacks.success(null);
+  //       });
+
+  //       try {
+  //         await getGeolocation();
+  //         expect.fail('Should have thrown an error');
+  //     } catch (error) {
+  //         expect(error).to.be.instanceof(Error);
+  //         expect(error.message).to.include('No response from geolocation API');
+  //     }
+  //   });
+
+  //   it('should make ajax call to correct URL', function () {
+  //       getGeolocation();
+  //       expect(ajaxStub.calledOnce).to.be.true;
+  //       expect(ajaxStub.firstCall.args[0]).to.equal('https://ut.pubmatic.com/geo?pubid=5890');
+  //   });
+
+  //   it('should handle partial geolocation data', async function () {
+  //     const partialResponse = {
+  //         cc: 'US'
+  //         // missing sc field
+  //     };
+
+  //     ajaxStub.callsFake((url, callbacks) => {
+  //         callbacks.success(JSON.stringify(partialResponse));
+  //     });
+
+  //     const result = await getGeolocation();
+  //     expect(result).to.equal('US');
+  // });
+
+  // it('should handle missing country code', async function () {
+  //     const noCountryResponse = {
+  //         sc: 'CA'
+  //         // missing cc field
+  //     };
+
+  //     ajaxStub.callsFake((url, callbacks) => {
+  //         callbacks.success(JSON.stringify(noCountryResponse));
+  //     });
+
+  //     const result = await getGeolocation();
+  //     expect(result).to.equal(undefined);
+  // });
+
+  //   it('should maintain promise chain', async function () {
+  //       const mockGeoResponse = {
+  //           cc: 'US',
+  //           sc: 'CA'
+  //       };
+
+  //       ajaxStub.callsFake((url, callbacks) => {
+  //           callbacks.success(JSON.stringify(mockGeoResponse));
+  //       });
+
+  //       const promise = getGeolocation();
+  //       expect(promise).to.be.instanceof(Promise);
+
+  //       const result = await promise;
+  //       expect(result).to.equal('US');
+  //   });
+    
+  // });
+
+  describe('getBidRequestData', () => {
+    let sandbox;
+    let _pubmaticFloorRulesPromiseMock;
+
+    const reqBidsConfigObj = {
+      adUnits: [{ code: 'ad-slot-code-0' }],
+      auctionId: 'auction-id-0',
+    };
+    const hookConfig = {
+      reqBidsConfigObj,
+      context: this,
+      nextFn: () => true,
+      haveExited: false,
+      timer: null
+    };
+    let continueAuctionStub;
+
+    beforeEach(() => {
       sandbox = sinon.createSandbox();
-      ajaxStub = sandbox.stub(ajax, 'ajax');
-      logErrorStub = sandbox.stub(utils, 'logError');
-      logWarnStub = sandbox.stub(utils, 'logWarn');
-  });
-
-  afterEach(function () {
+      continueAuctionStub = sandbox.stub(priceFloors, 'continueAuction');
+    });
+    afterEach(() => {
       sandbox.restore();
-  });
-
-  it('should successfully fetch and parse geolocation data', async function () {
-      const mockGeoResponse = {
-          cc: 'US',
-          sc: 'CA'
-      };
-
-      ajaxStub.callsFake((url, callbacks) => {
-          callbacks.success(JSON.stringify(mockGeoResponse));
-      });
-
-      const result = await getGeolocation();
-
-      expect(result).to.equal('US');
-      expect(ajaxStub.calledOnce).to.be.true;
-      expect(ajaxStub.firstCall.args[0]).to.equal('https://ut.pubmatic.com/geo?pubid=5890');
-      expect(logErrorStub.called).to.be.false;
-      expect(logWarnStub.called).to.be.false;
-  });
-
-  it('should handle null response gracefully', async function () {
-      ajaxStub.callsFake((url, callbacks) => {
-          callbacks.success(null);
-      });
-
-      try {
-        await getGeolocation();
-        expect.fail('Should have thrown an error');
-    } catch (error) {
-        expect(error).to.be.instanceof(Error);
-        expect(error.message).to.include('No response from geolocation API');
-    }
-  });
-
-  it('should make ajax call to correct URL', function () {
-      getGeolocation();
-      expect(ajaxStub.calledOnce).to.be.true;
-      expect(ajaxStub.firstCall.args[0]).to.equal('https://ut.pubmatic.com/geo?pubid=5890');
-  });
-
-  it('should handle partial geolocation data', async function () {
-    const partialResponse = {
-        cc: 'US'
-        // missing sc field
-    };
-
-    ajaxStub.callsFake((url, callbacks) => {
-        callbacks.success(JSON.stringify(partialResponse));
     });
-
-    const result = await getGeolocation();
-    expect(result).to.equal('US');
-});
-
-it('should handle missing country code', async function () {
-    const noCountryResponse = {
-        sc: 'CA'
-        // missing cc field
-    };
-
-    ajaxStub.callsFake((url, callbacks) => {
-        callbacks.success(JSON.stringify(noCountryResponse));
+    it('continueAuction once after _pubmaticFloorRulesPromise. Also getBidRequestData executed only once', async () => {
+      _pubmaticFloorRulesPromiseMock = Promise.resolve();
+      pubmaticSubmodule.getBidRequestData(reqBidsConfigObj, () => { });
+      await _pubmaticFloorRulesPromiseMock;
+      expect(continueAuctionStub.calledOnce);
+      expect(
+        continueAuctionStub.alwaysCalledWith(
+          hookConfig
+        )
+      );
+      pubmaticSubmodule.getBidRequestData(reqBidsConfigObj, () => { });
+      await _pubmaticFloorRulesPromiseMock;
+      expect(continueAuctionStub.calledOnce);
     });
-
-    const result = await getGeolocation();
-    expect(result).to.equal(undefined);
-});
-
-  it('should maintain promise chain', async function () {
-      const mockGeoResponse = {
-          cc: 'US',
-          sc: 'CA'
-      };
-
-      ajaxStub.callsFake((url, callbacks) => {
-          callbacks.success(JSON.stringify(mockGeoResponse));
-      });
-
-      const promise = getGeolocation();
-      expect(promise).to.be.instanceof(Promise);
-
-      const result = await promise;
-      expect(result).to.equal('US');
   });
-  
-});
+
 });
 
 

@@ -2,7 +2,8 @@ import { submodule } from '../src/hook.js';
 import { logError, isStr, logMessage } from '../src/utils.js';
 import {config as conf} from '../src/config.js';
 import { ajax } from '../src/ajax.js';
-import { getDeviceType as fetchDeviceType, getBrowser as fetchBrowser, getOS } from '../libraries/userAgentUtils/index.js';
+import { REGEX_BROWSERS, BROWSER_MAPPING } from '../src/constants.js';
+import { getDeviceType as fetchDeviceType, getOS } from '../libraries/userAgentUtils/index.js';
 
 /**
  * @typedef {import('../modules/rtdModule/index.js').RtdSubmodule} RtdSubmodule
@@ -14,27 +15,30 @@ import { getDeviceType as fetchDeviceType, getBrowser as fetchBrowser, getOS } f
  */
 import { continueAuction } from './priceFloors.js';
 
-// Constants consolidated
 const CONSTANTS = Object.freeze({
   SUBMODULE_NAME: 'pubmatic',
   REAL_TIME_MODULE: 'realTimeData',
   LOG_PRE_FIX: 'PubMatic-Rtd-Provider: ',
+  UTM: 'utm',
   UTM_VALUES : {
     TRUE : '1',
     FALSE : '0'
-  }
+  },
+  TIME_OF_DAY_VALUES: {
+    MORNING: 'morning',
+    AFTERNOON: 'afternoon',
+    EVENING: 'evening',
+    NIGHT: 'night',
+  },
 });
 
-// Endpoints consolidated
 const ENDPOINTS = Object.freeze({
-  FLOORS_ENDPOINT: `https://owsdk-stagingams.pubmatic.com:8443/openwrap/bidfloor/rtd_floors.json`,
-  GEOLOCATION: `https://ut.pubmatic.com/geo?pubid=5890`
+  FLOORS_BASEURL: `https://ads.pubmatic.com/AdServer/js/pwt/floors/`,
+  FLOORS_ENDPOINT: `/floors.json`,
 });
 
 let _timeOfDay;
 let _deviceType;
-let _country;
-let _region;
 let _browser;
 let _os;
 let _utm;
@@ -46,14 +50,29 @@ export function getCurrentTimeOfDay() {
   const currentHour = new Date().getHours();
 
   if (currentHour >= 5 && currentHour < 12) {
-    return 'morning';
+    return CONSTANTS.TIME_OF_DAY_VALUES.MORNING;
   } else if (currentHour >= 12 && currentHour < 17) {
-    return 'afternoon';
+    return CONSTANTS.TIME_OF_DAY_VALUES.AFTERNOON;
   } else if (currentHour >= 17 && currentHour < 19) {
-    return 'evening';
+    return CONSTANTS.TIME_OF_DAY_VALUES.EVENING;
   } else {
-    return 'night';
+    return CONSTANTS.TIME_OF_DAY_VALUES.NIGHT;
   }
+}
+
+export function getBrowserType() {
+	const userAgent = navigator.userAgent;
+	let browserName = userAgent == null ? -1 : 0;
+
+	if(userAgent) {
+		for(var i = 0; i < REGEX_BROWSERS.length; i++) {
+			if(userAgent.match(REGEX_BROWSERS[i])) {
+				browserName = BROWSER_MAPPING[i];
+				break;
+			}
+		}
+	}
+	return browserName;
 }
 
 //Getter-Setter Functions
@@ -62,7 +81,7 @@ export function getBrowser() {
 }
 
 export function setBrowser() {
-  let browser = fetchBrowser().toString();
+  let browser = getBrowserType().toString();
   _browser = browser;
 }
 
@@ -93,29 +112,13 @@ export function setTimeOfDay() {
   _timeOfDay = timeOfDay;
 }
 
-export function getCountry() {
-  return _country;
-}
-
-export function setCountry(value) {
-  _country = value;
-}
-
-export function getRegion() {
-  return _region;
-}
-
-export function setRegion(value) {
-  _region = value;
-}
-
 export function getUtm() {
   return _utm;
 }
 
 export function setUtm(url) {
   const queryString = url?.split('?')[1];
-  _utm = queryString?.includes('utm') ? CONSTANTS.UTM_VALUES.TRUE : CONSTANTS.UTM_VALUES.FALSE;
+  _utm = queryString?.includes(CONSTANTS.UTM) ? CONSTANTS.UTM_VALUES.TRUE : CONSTANTS.UTM_VALUES.FALSE;
 }
 
 export const getFloorsConfig = (apiResponse) => {
@@ -127,8 +130,6 @@ export const getFloorsConfig = (apiResponse) => {
       additionalSchemaFields: {
         deviceType: getDeviceType,
         timeOfDay: getTimeOfDay,
-        country: getCountry,
-        region: getRegion,
         browser: getBrowser,
         os: getOs,
         utm: getUtm
@@ -148,9 +149,9 @@ export const setFloorsConfig = (data) => {
   }
 };
 
-export const setPriceFloors = async () => {
+export const setPriceFloors = async (publisherId, profileId) => {
   try {
-    const apiResponse = await fetchFloorRules();
+    const apiResponse = await fetchFloorRules(publisherId, profileId);
     if (!apiResponse) {
       logError(CONSTANTS.LOG_PRE_FIX + 'Error while fetching floors: Empty response');
     }else{
@@ -161,10 +162,10 @@ export const setPriceFloors = async () => {
   }
 };
 
-export const fetchFloorRules = async () => {
+export const fetchFloorRules = async (publisherId, profileId) => {
   return new Promise((resolve, reject) => {
-    const url = ENDPOINTS.FLOORS_ENDPOINT;
-    
+    const url = `${ENDPOINTS.FLOORS_BASEURL}${publisherId}/${profileId}${ENDPOINTS.FLOORS_ENDPOINT}`;
+  
     ajax(url, {
       success: (responseText, response) => {
         try {
@@ -185,35 +186,6 @@ export const fetchFloorRules = async () => {
     });
   });
 };
-
-export const getGeolocation = async () =>{
-  return new Promise((resolve, reject) => {
-    const url = ENDPOINTS.GEOLOCATION;
-
-      ajax(url, {
-        success: (response) => {
-          try {
-            if (response) {
-              const apiResponse = JSON.parse(response);
-              setCountry(apiResponse?.cc);
-              setRegion(apiResponse?.sc);
-              resolve(apiResponse.cc);
-            } else {
-              reject(new Error(CONSTANTS.LOG_PRE_FIX + ' No response from geolocation API '));
-            }
-          } catch (error) {
-            logError(LOG_PRE_FIX,'Error geolocation API - ', error);
-            reject(error);
-          }
-        },
-        error: (response) => {
-          logError(LOG_PRE_FIX,'Error geolocation API - ', response);
-          reject(response);
-        },
-      });
-    
-  }); 
-}
 
 /**
  * Initialize the Pubmatic RTD Module.
@@ -239,8 +211,7 @@ function init(config, _userConsent) {
     return false;
     }  
 
-  _pubmaticFloorRulesPromise = setPriceFloors(config);
-  getGeolocation();
+  _pubmaticFloorRulesPromise = setPriceFloors(publisherId, profileId);
   setBrowser();
   setOs();
   setTimeOfDay();
@@ -270,6 +241,9 @@ const getBidRequestData = (() => {
         };
         continueAuction(hookConfig);
         onDone();
+      })
+      .catch((error) => {
+        logError(CONSTANTS.LOG_PRE_FIX, 'Error in updating floors :', error);
       });
 
       floorsAttached = true;
