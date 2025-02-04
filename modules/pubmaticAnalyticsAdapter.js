@@ -204,18 +204,13 @@ function getDevicePlatform() {
 }
 
 function getBrowserType() {
-	const userAgent = navigator.userAgent;
-	let browserName = userAgent == null ? -1 : 0;
+  const userAgent = navigator.userAgent;
+  let browserName = userAgent == null ? -1 : 0;
 
-	if(userAgent) {
-		for(var i = 0; i < REGEX_BROWSERS.length; i++) {
-			if(userAgent.match(REGEX_BROWSERS[i])) {
-				browserName = BROWSER_MAPPING[i];
-				break;
-			}
-		}
-	}
-	return browserName;
+  if (userAgent) {
+    browserName = BROWSER_MAPPING[(REGEX_BROWSERS.findIndex(regex => userAgent.match(regex)))] || 0;
+  }
+  return browserName.toString();
 }
 
 function getValueForKgpv(bid, adUnitId) {

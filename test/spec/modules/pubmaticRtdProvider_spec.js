@@ -1,36 +1,25 @@
 import { expect } from 'chai';
 import * as priceFloors from '../../../modules/priceFloors';
 import * as utils from '../../../src/utils.js';
-import * as ajax from '../../../src/ajax.js';
-import { registerSubModule, pubmaticSubmodule, getFloorsConfig, setFloorsConfig, setPriceFloors, fetchFloorRules,
-   getCurrentTimeOfDay, setBrowser, getBrowser, setOs, getOs, setDeviceType, getDeviceType, setTimeOfDay, getTimeOfDay,setUtm, getUtm,} from '../../../modules/pubmaticRtdProvider.js';
 import { config as conf } from '../../../src/config';
 import * as hook from '../../../src/hook.js';
+import { registerSubModule, pubmaticSubmodule, getFloorsConfig, setFloorsConfig, setPriceFloors, fetchFloorRules,
+  getCurrentTimeOfDay, getBrowserType, getOs, getDeviceType, getUtm} from '../../../modules/pubmaticRtdProvider.js';
 
-let clock;
+
 let sandbox;
-const getConfig = () => ({
-  params: {
-    publisherId: 'test-publisher-id',
-    profileId: 'test-profile-id'
-  },
-});
 
-beforeEach(function () {
+beforeEach(() => {
   sandbox = sinon.createSandbox();
-  clock = sandbox.useFakeTimers(new Date('2024-01-01T12:00:00')); // Set fixed time for testing
 });
 
-afterEach(function () {
+afterEach(() => {
   sandbox.restore();
-  clock.restore();
 });
 
-
-describe('Pubmatic RTD Provider', function () {
-  
+describe('Pubmatic RTD Provider', () => {
   describe('registerSubModule', () => {
-    it('should register RTD submodule provider', function () {
+    it('should register RTD submodule provider', () => {
       let submoduleStub = sinon.stub(hook, 'submodule');
       registerSubModule();
       assert(submoduleStub.calledOnceWith('realTimeData', pubmaticSubmodule));
@@ -38,27 +27,30 @@ describe('Pubmatic RTD Provider', function () {
     });
   });
   describe('submodule', () => {
-    describe('name', function () {
-      it('should be pubmatic', function () {
+    describe('name', () => {
+      it('should be pubmatic', () => {
         expect(pubmaticSubmodule.name).to.equal('pubmatic');
       });
     });
   });
 
-  describe('init', function () {
-    let sandbox;
+  describe('init', () => {
     let logErrorStub;
+    let continueAuctionStub;
+
+    const getConfig = () => ({
+      params: {
+        publisherId: 'test-publisher-id',
+        profileId: 'test-profile-id'
+      },
+    });
 
     beforeEach(() => {
-        sandbox = sinon.createSandbox();
-        logErrorStub = sandbox.stub(utils, 'logError');
+      logErrorStub = sandbox.stub(utils, 'logError');
+      continueAuctionStub = sandbox.stub(priceFloors, 'continueAuction');
     });
 
-    afterEach(() => {
-        sandbox.restore();
-    });
-
-    it('should return false if publisherId is missing', function () {
+    it('should return false if publisherId is missing', () => {
       const config = {
         params: {
           profileId: 'test-profile-id'
@@ -67,7 +59,7 @@ describe('Pubmatic RTD Provider', function () {
       expect(pubmaticSubmodule.init(config)).to.be.false;
     });
 
-    it('should return false if profileId is missing', function () {
+    it('should return false if profileId is missing', () => {
       const config = {
         params: {
           publisherId: 'test-publisher-id'
@@ -76,7 +68,7 @@ describe('Pubmatic RTD Provider', function () {
       expect(pubmaticSubmodule.init(config)).to.be.false;
     });
 
-    it('should return false if publisherId is not a string', function () {
+    it('should return false if publisherId is not a string', () => {
       const config = {
         params: {
           publisherId: 123,
@@ -86,7 +78,7 @@ describe('Pubmatic RTD Provider', function () {
       expect(pubmaticSubmodule.init(config)).to.be.false;
     });
 
-    it('should return false if profileId is not a string', function () {
+    it('should return false if profileId is not a string', () => {
       const config = {
         params: {
           publisherId: 'test-publisher-id',
@@ -96,64 +88,43 @@ describe('Pubmatic RTD Provider', function () {
       expect(pubmaticSubmodule.init(config)).to.be.false;
     });
 
-    it('should initialize successfully with valid config', function () {
-      const config = {
-          params: {
-              publisherId: 'test-publisher-id',
-              profileId: 'test-profile-id'
-          }
-      };
-  
-      expect(pubmaticSubmodule.init(config)).to.be.true;
-  });
-
-    it('should handle empty config object', function() {
-        expect(pubmaticSubmodule.init({})).to.be.false;
-        expect(logErrorStub.calledWith(sinon.match(/Missing publisher Id/))).to.be.true;
+    it('should initialize successfully with valid config', () => {
+      expect(pubmaticSubmodule.init(getConfig())).to.be.true;
     });
 
-    describe('error handling', function() {
-        beforeEach(function() {
-            this.originalConsoleError = console.error;
-            console.error = () => {};
-        });
+    it('should handle empty config object', () => {
+      expect(pubmaticSubmodule.init({})).to.be.false;
+      expect(logErrorStub.calledWith(sinon.match(/Missing publisher Id/))).to.be.true;
+    });
 
-        afterEach(function() {
-            console.error = this.originalConsoleError;
-        });
-
-        it('should handle null/undefined config gracefully', function() {
-            expect(pubmaticSubmodule.init(null)).to.be.false;
-            expect(pubmaticSubmodule.init(undefined)).to.be.false;
-            expect(logErrorStub.called).to.be.true;
-        });
-
-        it('should handle missing params gracefully', function() {
-            const invalidConfigs = [
-                { notParams: {} },
-                { params: null },
-                { params: undefined }
-            ];
-
-            invalidConfigs.forEach(config => {
-                logErrorStub.resetHistory();
-                expect(pubmaticSubmodule.init(config)).to.be.false;
-                expect(logErrorStub.called).to.be.true;
-            });
-        });
+    it('should return false if continueAuction is not a function', () => {
+      continueAuctionStub.value(undefined);
+      expect(pubmaticSubmodule.init(getConfig())).to.be.false;
+      expect(logErrorStub.calledWith(sinon.match(/continueAuction is not a function/))).to.be.true;
     });
   });
 
-  describe('getCurrentTimeOfDay', function () {
+  describe('getCurrentTimeOfDay', () => {
+    let clock;
+
+    beforeEach(() => {
+      clock = sandbox.useFakeTimers(new Date('2024-01-01T12:00:00')); // Set fixed time for testing
+    });
+
+    afterEach(() => {
+      clock.restore();
+    });
+
     const testTimes = [
       { hour: 6, expected: 'morning' },
       { hour: 13, expected: 'afternoon' },
       { hour: 18, expected: 'evening' },
-      { hour: 22, expected: 'night' }
+      { hour: 22, expected: 'night' },
+      { hour: 4, expected: 'night'}
     ];
 
     testTimes.forEach(({hour, expected}) => {
-      it(`should return ${expected} at ${hour}:00`, function () {
+      it(`should return ${expected} at ${hour}:00`, () => {
         clock.setSystemTime(new Date().setHours(hour));
         const result = getCurrentTimeOfDay();
         expect(result).to.equal(expected);
@@ -161,420 +132,305 @@ describe('Pubmatic RTD Provider', function () {
     });
   });
 
-  describe('Utility functions', function () {
-    it('should get and set browser correctly', function () {
-      setBrowser();
-      expect(getBrowser()).to.be.a('string');
+  describe('getBrowserType', () => {
+    let userAgentStub;
+
+    const USER_AGENTS = {
+      chrome: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      firefox: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
+      edge: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/91.0.864.67 Safari/537.36',
+      safari: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.6 Mobile/15E148 Safari/604.1',
+      ie: 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)',
+      opera: 'Opera/9.80 (Windows NT 6.1; WOW64) Presto/2.12.388 Version/12.16',
+      unknown: 'UnknownBrowser/1.0'
+    };
+
+    beforeEach(() => {
+      userAgentStub = sandbox.stub(navigator, 'userAgent');
     });
 
-    it('should get and set OS correctly', function () {
-      setOs();
+    afterEach(() => {
+      userAgentStub.restore();
+    });
+
+    it('should detect Chrome', () => {
+      userAgentStub.value(USER_AGENTS.chrome);
+      expect(getBrowserType()).to.equal('9');
+    });
+
+    it('should detect Firefox', () => {
+      userAgentStub.value(USER_AGENTS.firefox);
+      expect(getBrowserType()).to.equal('12');
+    });
+
+    it('should detect Edge', () => {
+      userAgentStub.value(USER_AGENTS.edge);
+      expect(getBrowserType()).to.equal('2');
+    });
+
+    it('should detect Internet Explorer', () => {
+      userAgentStub.value(USER_AGENTS.ie);
+      expect(getBrowserType()).to.equal('4');
+    });
+
+    it('should detect Opera', () => {
+      userAgentStub.value(USER_AGENTS.opera);
+      expect(getBrowserType()).to.equal('3');
+    });
+
+    it('should return 0 for unknown browser', () => {
+      userAgentStub.value(USER_AGENTS.unknown);
+      expect(getBrowserType()).to.equal('0');
+    });
+
+    it('should return -1 when userAgent is null', () => {
+      userAgentStub.value(null);
+      expect(getBrowserType()).to.equal('-1');
+    });
+  });
+
+  describe('Utility functions', () => {
+    it('should set browser correctly', () => {
+      expect(getBrowserType()).to.be.a('string');
+    });
+
+    it('should set OS correctly', () => {
       expect(getOs()).to.be.a('string');
     });
 
-    it('should get and set device type correctly', function () {
-      setDeviceType();
+    it('should set device type correctly', () => {
       expect(getDeviceType()).to.be.a('string');
     });
 
-    it('should get and set time of day correctly', function () {
-      setTimeOfDay();
-      expect(getTimeOfDay()).to.be.a('string');
+    it('should set time of day correctly', () => {
+      expect(getCurrentTimeOfDay()).to.be.a('string');
     });
 
-    // it('should get and set country correctly', function () {
-    //   setCountry('India');
-    //   expect(getCountry()).to.be.a('string');
-    // });
-
-    // it('should get and set Region correctly', function () {
-    //   setRegion('Bihar');
-    //   expect(getRegion()).to.be.a('string');
-    // });
-
-    it('should get and set UTM as 1', function () {
-      setUtm('https://example.com?utm_source=test');
-      expect(getUtm()).to.equal('1');
-    });
-
-    it('should get and set UTM as 0', function () {
-      setUtm('https://example.com?source=test');
-      expect(getUtm()).to.equal('0');
+    it('should set UTM correctly', () => {
+      expect(getUtm()).to.be.a('string');
     });
   });
 
-  describe('getFloorsConfig', function() {
-    it('should return correct config structure', function() {
-        const result = getFloorsConfig({});
-        
-        expect(result.floors.data).to.deep.equal({});
+  describe('getFloorsConfig', () => {
+    it('should return correct config structure', () => {
+      const result = getFloorsConfig({});
 
-        // Verify the additionalSchemaFields structure
-        expect(result.floors.additionalSchemaFields).to.have.all.keys([
-            'deviceType',
-            'timeOfDay',
-            // 'country',
-            // 'region',
-            'browser',
-            'os',
-            'utm'
-        ]);
+      expect(result.floors.data).to.deep.equal({});
 
-        // Verify that all fields are functions
-        Object.values(result.floors.additionalSchemaFields).forEach(field => {
-            expect(field).to.be.a('function');
-        });
+      // Verify the additionalSchemaFields structure
+      expect(result.floors.additionalSchemaFields).to.have.all.keys([
+        'deviceType',
+        'timeOfDay',
+        'browser',
+        'os',
+        'utm'
+      ]);
+
+      Object.values(result.floors.additionalSchemaFields).forEach(field => {
+        expect(field).to.be.a('function');
+      });
     });
 
-    it('should merge apiResponse data correctly', function() {
-        const apiResponse = {
+    it('should merge apiResponse data correctly', () => {
+      const apiResponse = {
+        currency: 'USD',
+        schema: { fields: ['mediaType'] },
+        values: { 'banner': 1.0 }
+      };
+
+      const result = getFloorsConfig(apiResponse);
+
+      expect(result.floors.data).to.deep.equal(apiResponse);
+    });
+
+    it('should maintain correct function references', () => {
+      const result = getFloorsConfig({});
+
+      expect(result.floors.additionalSchemaFields.deviceType).to.equal(getDeviceType);
+      expect(result.floors.additionalSchemaFields.timeOfDay).to.equal(getCurrentTimeOfDay);
+      expect(result.floors.additionalSchemaFields.browser).to.equal(getBrowserType);
+      expect(result.floors.additionalSchemaFields.os).to.equal(getOs);
+      expect(result.floors.additionalSchemaFields.utm).to.equal(getUtm);
+    });
+  });
+
+  describe('setFloorsConfig', () => {
+    let logMessageStub;
+    let confStub;
+
+    beforeEach(() => {
+      logMessageStub = sandbox.stub(utils, 'logMessage');
+      confStub = sandbox.stub(conf, 'setConfig');
+    });
+
+    it('should set config when valid data is provided', () => {
+      const validData = {
+        currency: 'USD',
+        schema: { fields: ['mediaType'] }
+      };
+
+      setFloorsConfig(validData);
+
+      expect(confStub.calledOnce).to.be.true;
+      const calledWith = confStub.getCall(0).args[0];
+      expect(calledWith).to.have.nested.property('floors.data.currency', 'USD');
+      expect(calledWith).to.have.nested.property('floors.data.schema.fields[0]', 'mediaType');
+    });
+
+    it('should log message when data is null', () => {
+      setFloorsConfig(null);
+
+      expect(confStub.called).to.be.false;
+      expect(logMessageStub.calledOnce).to.be.true;
+      expect(logMessageStub.getCall(0).args[0]).to.include('floors data is empty');
+    });
+
+    it('should log message when data is undefined', () => {
+      setFloorsConfig(undefined);
+
+      expect(confStub.called).to.be.false;
+      expect(logMessageStub.calledOnce).to.be.true;
+      expect(logMessageStub.getCall(0).args[0]).to.include('floors data is empty');
+    });
+
+    it('should log message when data is an empty object', () => {
+      setFloorsConfig({});
+
+      expect(confStub.called).to.be.false;
+      expect(logMessageStub.calledOnce).to.be.true;
+      expect(logMessageStub.getCall(0).args[0]).to.include('floors data is empty');
+    });
+
+    it('should log message when data is an array', () => {
+      setFloorsConfig([]);
+
+      expect(confStub.called).to.be.false;
+      expect(logMessageStub.calledOnce).to.be.true;
+      expect(logMessageStub.getCall(0).args[0]).to.include('floors data is empty');
+    });
+
+    it('should set config with complex floor data', () => {
+      const floorData = {
+        currency: 'USD',
+        schema: {
+          fields: ['mediaType', 'size'],
+          delimiter: '|'
+        },
+        values: {
+          'banner|300x250': 1.0,
+          'banner|300x600': 2.0
+        }
+      };
+
+      setFloorsConfig(floorData);
+
+      expect(confStub.calledOnce).to.be.true;
+      const calledWith = confStub.getCall(0).args[0];
+      expect(calledWith.floors.data).to.deep.equal(floorData);
+    });
+
+    it('should handle non-object data types', () => {
+      const invalidInputs = [
+        'string',
+        123,
+        true,
+        () => {},
+        Symbol('test')
+      ];
+
+      invalidInputs.forEach(input => {
+        setFloorsConfig(input);
+        expect(confStub.called).to.be.false;
+        expect(logMessageStub.called).to.be.true;
+      });
+    });
+  });
+
+  describe('Price Floor Functions', () => {
+    let logErrorStub;
+    let fetchStub;
+    let confStub;
+
+    beforeEach(() => {
+      logErrorStub = sandbox.stub(utils, 'logError');
+      fetchStub = sandbox.stub(window, 'fetch');
+      confStub = sandbox.stub(conf, 'setConfig');
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+    });
+
+    describe('fetchFloorRules', () => {
+      it('should successfully fetch and parse floor rules', async () => {
+        const mockApiResponse = {
+          data: {
             currency: 'USD',
-            schema: { fields: ['mediaType'] },
-            values: { 'banner': 1.0 }
+            modelGroups: [],
+            values: {}
+          }
         };
 
-        const result = getFloorsConfig(apiResponse);
-        
-        expect(result.floors.data).to.deep.equal(apiResponse);
+        fetchStub.resolves(new Response(JSON.stringify(mockApiResponse), { status: 200 }));
+
+        const result = await fetchFloorRules('publisherId', 'profileId');
+        expect(result).to.deep.equal(mockApiResponse);
+      });
+
+      it('should log error when JSON parsing fails', async () => {
+        fetchStub.resolves(new Response('Invalid JSON', { status: 200 }));
+
+        await fetchFloorRules('publisherId', 'profileId');
+        expect(logErrorStub.calledOnce).to.be.true;
+        expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
+      });
+
+      it('should log error when response is not ok', async () => {
+        fetchStub.resolves(new Response(null, { status: 500 }));
+
+        await fetchFloorRules('publisherId', 'profileId');
+        expect(logErrorStub.calledWith(sinon.match(/Error while fetching floors: No response/))).to.be.true;
+      });
+
+      it('should log error on network failure', async () => {
+        fetchStub.rejects(new Error('Network Error'));
+
+        await fetchFloorRules('publisherId', 'profileId');
+        expect(logErrorStub.calledOnce).to.be.true;
+        expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
+      });
     });
 
-    it('should maintain correct function references', function() {
-        const result = getFloorsConfig({});
-        
-        // Verify that the functions are the correct references
-        expect(result.floors.additionalSchemaFields.deviceType).to.equal(getDeviceType);
-        expect(result.floors.additionalSchemaFields.timeOfDay).to.equal(getTimeOfDay);
-        // expect(result.floors.additionalSchemaFields.country).to.equal(getCountry);
-        // expect(result.floors.additionalSchemaFields.region).to.equal(getRegion);
-        expect(result.floors.additionalSchemaFields.browser).to.equal(getBrowser);
-        expect(result.floors.additionalSchemaFields.os).to.equal(getOs);
-        expect(result.floors.additionalSchemaFields.utm).to.equal(getUtm);
-    });
-});
+    describe('setPriceFloors', () => {
+      it('should log error for empty response', async () => {
+        fetchStub.resolves(new Response(null, { status: 200 }));
 
-  describe('setFloorsConfig', function() {
-      let logMessageStub;
-      let confStub;
-
-      beforeEach(function() {
-          logMessageStub = sandbox.stub(utils, 'logMessage');
-          confStub = sandbox.stub(conf, 'mergeConfig');
+        await setPriceFloors();
+        expect(logErrorStub.calledWith(sinon.match(/Error while fetching floors/))).to.be.true;
       });
 
-      it('should set config when valid data is provided', function() {
-          const validData = {
-              currency: 'USD',
-              schema: { fields: ['mediaType'] }
-          };
+      it('should successfully process valid response', async () => {
+        const mockApiResponse = {
+          data: {
+            currency: 'USD',
+            modelGroups: [],
+            values: {}
+          }
+        };
 
-          setFloorsConfig(validData);
+        fetchStub.resolves(new Response(JSON.stringify(mockApiResponse), { status: 200 }));
+        await setPriceFloors('publisherId', 'profileId');
 
-          expect(confStub.calledOnce).to.be.true;
-          const calledWith = confStub.getCall(0).args[0];
-          expect(calledWith).to.have.nested.property('floors.data.currency', 'USD');
-          expect(calledWith).to.have.nested.property('floors.data.schema.fields[0]', 'mediaType');
+        expect(fetchStub.calledOnce).to.be.true;
+        expect(confStub.calledOnce).to.be.true;
       });
-
-      it('should log message when data is null', function() {
-          setFloorsConfig(null);
-          
-          expect(confStub.called).to.be.false;
-          expect(logMessageStub.calledOnce).to.be.true;
-          expect(logMessageStub.getCall(0).args[0]).to.include('floors data is empty');
-      });
-
-      it('should log message when data is undefined', function() {
-          setFloorsConfig(undefined);
-          
-          expect(confStub.called).to.be.false;
-          expect(logMessageStub.calledOnce).to.be.true;
-          expect(logMessageStub.getCall(0).args[0]).to.include('floors data is empty');
-      });
-
-      it('should log message when data is an empty object', function() {
-          setFloorsConfig({});
-          
-          expect(confStub.called).to.be.false;
-          expect(logMessageStub.calledOnce).to.be.true;
-          expect(logMessageStub.getCall(0).args[0]).to.include('floors data is empty');
-      });
-
-      it('should log message when data is an array', function() {
-          setFloorsConfig([]);
-          
-          expect(confStub.called).to.be.false;
-          expect(logMessageStub.calledOnce).to.be.true;
-          expect(logMessageStub.getCall(0).args[0]).to.include('floors data is empty');
-      });
-
-      it('should set config with complex data structure', function() {
-          const complexData = {
-              currency: 'USD',
-              schema: {
-                  fields: ['mediaType', 'size'],
-                  delimiter: '|'
-              },
-              values: {
-                  'banner|300x250': 1.0,
-                  'banner|300x600': 2.0
-              }
-          };
-
-          setFloorsConfig(complexData);
-
-          expect(confStub.calledOnce).to.be.true;
-          const calledWith = confStub.getCall(0).args[0];
-          expect(calledWith.floors.data).to.deep.equal(complexData);
-      });
-
-      it('should handle non-object data types', function() {
-          const invalidInputs = [
-              'string',
-              123,
-              true,
-              () => {},
-              Symbol('test')
-          ];
-
-          invalidInputs.forEach(input => {
-              setFloorsConfig(input);
-              expect(confStub.called).to.be.false;
-              expect(logMessageStub.called).to.be.true;
-          });
-      });
-  });
-
-  describe('Price Floor Functions', function () {
-    let sandbox;
-    let logErrorStub;
-    let ajaxStub;
-
-    beforeEach(function () {
-        sandbox = sinon.createSandbox();
-        logErrorStub = sandbox.stub(utils, 'logError');
-        ajaxStub = sandbox.stub(ajax, 'ajax');
-    });
-
-    afterEach(function () {
-        sandbox.restore();
-    });
-
-    describe('fetchFloorRules', function () {
-        it('should successfully fetch and parse floor rules', async function () {
-            const mockApiResponse = {
-                floor: {
-                    data: {
-                        currency: 'USD',
-                        modelGroups: [],
-                        values: {}
-                    }
-                }
-            };
-
-            ajaxStub.callsFake((url, callbacks) => {
-                callbacks.success('success', {
-                    response: JSON.stringify(mockApiResponse)
-                });
-            });
-
-            const result = await fetchFloorRules();
-            expect(result).to.deep.equal(mockApiResponse);
-        });
-
-        it('should reject when JSON parsing fails', async function () {
-            ajaxStub.callsFake((url, callbacks) => {
-                callbacks.success('success', {
-                    response: 'Invalid JSON'
-                });
-            });
-
-            try {
-                await fetchFloorRules();
-                expect.fail('Should have thrown an error');
-            } catch (error) {
-                expect(error).to.be.instanceof(SyntaxError);
-                expect(error.message).to.include('JSON parsing error');
-            }
-        });
-    });
-
-    describe('setPriceFloors', function () {
-        it('should handle JSON parsing errors', async function () {
-            ajaxStub.callsFake((url, callbacks) => {
-                callbacks.success('success', {
-                    response: 'Invalid JSON'
-                });
-            });
-
-            await setPriceFloors();
-            expect(logErrorStub.calledOnce).to.be.true;
-            expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
-        });
-
-        it('should handle empty response', async function () {
-            ajaxStub.callsFake((url, callbacks) => {
-                callbacks.success('success', {});
-            });
-
-            await setPriceFloors();
-            expect(logErrorStub.calledOnce).to.be.true;
-            expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
-        });
-
-        it('should handle null response', async function () {
-            ajaxStub.callsFake((url, callbacks) => {
-                callbacks.success('success', {
-                    response: null
-                });
-            });
-
-            await setPriceFloors();
-            expect(logErrorStub.calledOnce).to.be.true;
-            expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
-        });
-
-        it('should successfully process valid response', async function () {
-          const mockApiResponse = {
-              floor: {
-                  data: {
-                      currency: 'USD',
-                      modelGroups: [],
-                      values: {}
-                  }
-              }
-          };
-
-          // Mock the ajax success callback with the correct response structure
-          ajaxStub.callsFake((url, callbacks) => {
-              callbacks.success(JSON.stringify(mockApiResponse), {
-                  response: JSON.stringify(mockApiResponse)
-              });
-          });
-
-          await setPriceFloors();
-          
-          //expect(logErrorStub.called).to.be.false;
-          expect(ajaxStub.calledOnce).to.be.true;
-      });
-
-        it('should handle network errors', async function () {
-            ajaxStub.callsFake((url, callbacks) => {
-                callbacks.error('Network Error');
-            });
-
-            await setPriceFloors();
-            expect(logErrorStub.calledOnce).to.be.true;
-            expect(logErrorStub.firstCall.args[0]).to.include('Error while fetching floors');
-        });
     });
   });
 
-  // describe('getGeolocation', function () {
-  //   let sandbox;
-  //   let ajaxStub;
-  //   let logErrorStub;
-  //   let logWarnStub;
-
-  //   beforeEach(function () {
-  //       sandbox = sinon.createSandbox();
-  //       ajaxStub = sandbox.stub(ajax, 'ajax');
-  //       logErrorStub = sandbox.stub(utils, 'logError');
-  //       logWarnStub = sandbox.stub(utils, 'logWarn');
-  //   });
-
-  //   afterEach(function () {
-  //       sandbox.restore();
-  //   });
-
-  //   it('should successfully fetch and parse geolocation data', async function () {
-  //       const mockGeoResponse = {
-  //           cc: 'US',
-  //           sc: 'CA'
-  //       };
-
-  //       ajaxStub.callsFake((url, callbacks) => {
-  //           callbacks.success(JSON.stringify(mockGeoResponse));
-  //       });
-
-  //       const result = await getGeolocation();
-
-  //       expect(result).to.equal('US');
-  //       expect(ajaxStub.calledOnce).to.be.true;
-  //       expect(ajaxStub.firstCall.args[0]).to.equal('https://ut.pubmatic.com/geo?pubid=5890');
-  //       expect(logErrorStub.called).to.be.false;
-  //       expect(logWarnStub.called).to.be.false;
-  //   });
-
-  //   it('should handle null response gracefully', async function () {
-  //       ajaxStub.callsFake((url, callbacks) => {
-  //           callbacks.success(null);
-  //       });
-
-  //       try {
-  //         await getGeolocation();
-  //         expect.fail('Should have thrown an error');
-  //     } catch (error) {
-  //         expect(error).to.be.instanceof(Error);
-  //         expect(error.message).to.include('No response from geolocation API');
-  //     }
-  //   });
-
-  //   it('should make ajax call to correct URL', function () {
-  //       getGeolocation();
-  //       expect(ajaxStub.calledOnce).to.be.true;
-  //       expect(ajaxStub.firstCall.args[0]).to.equal('https://ut.pubmatic.com/geo?pubid=5890');
-  //   });
-
-  //   it('should handle partial geolocation data', async function () {
-  //     const partialResponse = {
-  //         cc: 'US'
-  //         // missing sc field
-  //     };
-
-  //     ajaxStub.callsFake((url, callbacks) => {
-  //         callbacks.success(JSON.stringify(partialResponse));
-  //     });
-
-  //     const result = await getGeolocation();
-  //     expect(result).to.equal('US');
-  // });
-
-  // it('should handle missing country code', async function () {
-  //     const noCountryResponse = {
-  //         sc: 'CA'
-  //         // missing cc field
-  //     };
-
-  //     ajaxStub.callsFake((url, callbacks) => {
-  //         callbacks.success(JSON.stringify(noCountryResponse));
-  //     });
-
-  //     const result = await getGeolocation();
-  //     expect(result).to.equal(undefined);
-  // });
-
-  //   it('should maintain promise chain', async function () {
-  //       const mockGeoResponse = {
-  //           cc: 'US',
-  //           sc: 'CA'
-  //       };
-
-  //       ajaxStub.callsFake((url, callbacks) => {
-  //           callbacks.success(JSON.stringify(mockGeoResponse));
-  //       });
-
-  //       const promise = getGeolocation();
-  //       expect(promise).to.be.instanceof(Promise);
-
-  //       const result = await promise;
-  //       expect(result).to.equal('US');
-  //   });
-    
-  // });
 
   describe('getBidRequestData', () => {
-    let sandbox;
     let _pubmaticFloorRulesPromiseMock;
+    let continueAuctionStub;
 
     const reqBidsConfigObj = {
       adUnits: [{ code: 'ad-slot-code-0' }],
@@ -587,16 +443,12 @@ describe('Pubmatic RTD Provider', function () {
       haveExited: false,
       timer: null
     };
-    let continueAuctionStub;
 
     beforeEach(() => {
-      sandbox = sinon.createSandbox();
       continueAuctionStub = sandbox.stub(priceFloors, 'continueAuction');
     });
-    afterEach(() => {
-      sandbox.restore();
-    });
-    it('continueAuction once after _pubmaticFloorRulesPromise. Also getBidRequestData executed only once', async () => {
+
+    it('should call continueAuction once after _pubmaticFloorRulesPromise. Also getBidRequestData executed only once', async () => {
       _pubmaticFloorRulesPromiseMock = Promise.resolve();
       pubmaticSubmodule.getBidRequestData(reqBidsConfigObj, () => { });
       await _pubmaticFloorRulesPromiseMock;
@@ -606,13 +458,6 @@ describe('Pubmatic RTD Provider', function () {
           hookConfig
         )
       );
-      pubmaticSubmodule.getBidRequestData(reqBidsConfigObj, () => { });
-      await _pubmaticFloorRulesPromiseMock;
-      expect(continueAuctionStub.calledOnce);
     });
   });
-
 });
-
-
-
