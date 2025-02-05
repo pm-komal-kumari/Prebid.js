@@ -210,7 +210,7 @@ function getBrowserType() {
   if (userAgent) {
     browserName = BROWSER_MAPPING[(REGEX_BROWSERS.findIndex(regex => userAgent.match(regex)))] || 0;
   }
-  return browserName.toString();
+  return browserName;
 }
 
 function getValueForKgpv(bid, adUnitId) {
