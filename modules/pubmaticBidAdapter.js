@@ -1,4 +1,4 @@
-import { getBidRequest, logWarn, isBoolean, isStr, isArray, inIframe, mergeDeep, deepAccess, isNumber, deepSetValue, logInfo, logError, deepClone, uniques, isPlainObject, isInteger, generateUUID } from '../src/utils.js';
+import { getBidRequest, logWarn, isBoolean, isStr, isArray, inIframe, mergeDeep, deepAccess, isNumber, deepSetValue, logInfo, logError, deepClone, uniques, isPlainObject, isInteger, generateUUID, isFn } from '../src/utils.js';
 import { registerBidder } from '../src/adapters/bidderFactory.js';
 import { BANNER, VIDEO, NATIVE, ADPOD } from '../src/mediaTypes.js';
 import { config } from '../src/config.js';
@@ -151,16 +151,26 @@ let publisherId = 0;
 let isInvalidNativeRequest = false;
 let biddersList = ['pubmatic'];
 const allBiddersList = ['all'];
-let revShare;
+let bidCpmAdjustment;
+let mediaType;
 
-function _calculateRevShare(bid) {
-  console.log('Inside Calculation revshare : ', bid);
-  if(bid){
-    const difference = bid.originalCpm - bid.cpm;
-    revShare =  (difference / bid.originalCpm) * 100;
-    console.log('Inside Calculation revshare -> difference : ', revShare);
+function _calculateBidCpmAdjustment(bid){
+  if (bid){
+  const { originalCurrency, currency, cpm, originalCpm, meta } = bid;
+
+  const adjustedCpm = originalCurrency !== currency && isFn(bid.getCpmInNewCurrency) 
+    ? bid.getCpmInNewCurrency(originalCurrency) 
+    : cpm;
+
+    console.log('Inside Calculation bidCpmAdjustment : ', bid);
+    console.log('Inside Calculation bidCpmAdjustment -> getCpmInNewCurrency  : ',adjustedCpm);  
+
+  bidCpmAdjustment = parseFloat(((originalCpm - adjustedCpm) / originalCpm).toFixed(2));
+  mediaType = meta?.mediaType;
+  console.log('Inside Calculation bidCpmAdjustment -> difference : ', bidCpmAdjustment);
   }
-}
+};
+
 
 export function _getDomainFromURL(url) {
   let anchor = document.createElement('a');
@@ -694,22 +704,6 @@ function _createImpressionObject(bid, bidderRequest) {
   var format = [];
   var isFledgeEnabled = bidderRequest?.paapi?.enabled;
 
-  if(revShare === undefined){
-    const bidCpmAdjustment = bidderRequest ? bidderSettings.get(bidderRequest.bidderCode, 'bidCpmAdjustment') : undefined;
-    console.log('IN Pubmatic Bid Adapter -> bidCpmAdjustment -> ', bidCpmAdjustment);
- 
-    if (bidCpmAdjustment && typeof bidCpmAdjustment === 'function') {
-     try {
-       const netCpm = bidCpmAdjustment(100, {} , bidderRequest);
-       netCpm >= 0 ? revShare = 100 - netCpm : undefined;
-     } catch (e) {
-       logError('Error during bid adjustment', e);
-     }
-   }
- 
-   console.log('IN Pubmatic Bid Adapter -> revShare -> ', revShare);
-  }
-
   impObj = {
     id: bid.bidId,
     tagid: bid.params.adUnit || undefined,
@@ -717,7 +711,8 @@ function _createImpressionObject(bid, bidderRequest) {
     secure: 1,
     ext: {
       pmZoneId: _parseSlotParam('pmzoneid', bid.params.pmzoneid),
-      revShare: revShare 
+      bidCpmAdjustment: bidCpmAdjustment ,
+      mediaType : mediaType
     },
     bidfloorcur: bid.params.currency ? _parseSlotParam('currency', bid.params.currency) : DEFAULT_CURRENCY,
     displaymanager: 'Prebid.js',
@@ -1545,7 +1540,7 @@ export const spec = {
   },
 
   onBidWon: (bid) => {
-    _calculateRevShare(bid);
+    _calculateBidCpmAdjustment(bid);
   } 
 };
 

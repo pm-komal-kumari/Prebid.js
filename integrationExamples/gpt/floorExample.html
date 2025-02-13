@@ -1,62 +1,62 @@
 <html>
 
 <head>
-  <script async src="../../build/dev/prebid.js"></script>
+    <script async src="../../build/dev/prebid.js"></script>
     <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
     <script>
         var FAILSAFE_TIMEOUT = 3300;
         //var PREBID_TIMEOUT = 1000;
 
         var adUnits = [{
-                code: 'div-gpt-ad-1460505748561-0',
-                mediaTypes: {
-                    banner: {
-                        sizes: [[300, 250], [300,600]],
-                        pos: 7,
+            code: 'div-gpt-ad-1460505748561-0',
+            mediaTypes: {
+                banner: {
+                    sizes: [[300, 250], [300, 600]],
+                    pos: 7,
+                }
+            },
+            // Replace this object to test a new Adapter!
+            bids: [
+                {
+                    bidder: 'appnexus',
+                    params: {
+                        placementId: 13144370
                     }
-                },  
-                // Replace this object to test a new Adapter!
-                bids: [
-                    {
-                        bidder: 'appnexus',
-                        params: {
-                            placementId: 13144370
-                        }
-                    }, {
-                        bidder: 'pubmatic',
-                        params: {
-                            publisherId: '103207',
-                            adUnit: 'dcomHomeTop-728x90',
-                        }
-                    },
-    
-                ]
-            }
+                }, {
+                    bidder: 'pubmatic',
+                    params: {
+                        publisherId: '103207',
+                        adUnit: 'dcomHomeTop-728x90',
+                    }
+                },
+
+            ]
+        }
             ,
-            {
-                code: 'div-gpt-ad-1460505748561-1',
-                mediaTypes: {
-                    banner: {
-                        sizes: [[728, 90]],
+        {
+            code: 'div-gpt-ad-1460505748561-1',
+            mediaTypes: {
+                banner: {
+                    sizes: [[728, 90]],
+                }
+            },
+            // Replace this object to test a new Adapter!
+            bids: [
+                {
+                    bidder: 'appnexus',
+                    params: {
+                        placementId: 13144370
                     }
-                },  
-                // Replace this object to test a new Adapter!
-                bids: [
-                    {
-                        bidder: 'appnexus',
-                        params: {
-                            placementId: 13144370
-                        }
-                    }, {
-                        bidder: 'pubmatic',
-                        params: {
-                            publisherId: '103207',
-                            adUnit: 'dcomHomeTop-728x90',
-                        }
-                    },
-    
-                ]
-            }
+                }, {
+                    bidder: 'pubmatic',
+                    params: {
+                        publisherId: '103207',
+                        adUnit: 'dcomHomeTop-728x90',
+                    }
+                },
+
+            ]
+        }
         ];
 
         var pbjs = pbjs || {};
@@ -75,14 +75,17 @@
         pbjs.que.push(function () {
 
             pbjs.setConfig({
-                enableSendAllBids : true,
+                enableSendAllBids: true,
                 enableTIDs: true,
                 bidderTimeout: 3000,
-                floors:{
+                currency: {
+                    adServerCurrency: 'JPY',
+                },
+                floors: {
                     enforcement: {
                         enforceJS: false
                     },
-                    data: {   
+                    data: {
                         currency: 'USD',
                         skipRate: 0,
                         modelVersion: 'some setconfig model version',
@@ -90,7 +93,7 @@
                             fields: ['mediaType']
                         },
                         values: {
-                            'banner' : 2,
+                            'banner': 2,
                         }
                     }
                 }
@@ -98,28 +101,34 @@
 
             pbjs.bidderSettings = {
                 pubmatic: {
-                    bidCpmAdjustment : function(bidCpm, bid){
+                    bidCpmAdjustment: function (bidCpm, bid) {
                         console.log("KK >> ", bid);
-                        if(bid && bid.mediaType === 'banner'){
+                        if (bid && bid.mediaType === 'banner') {
                             return bidCpm * .50;
                         }
                         return bidCpm * .90;
                     }
-            }
+                }
             };
-            pbjs.addAdUnits(adUnits);
+            pbjs.addAdUnits(adUnits[0]);
             pbjs.enableAnalytics({
-                    provider: 'pubmatic',
-                    options: {
-                        "publisherId": 5890 // please contact PubMatic to get a publisherId for yourself
-                    }
+                provider: 'pubmatic',
+                options: {
+                    "publisherId": 5890 // please contact PubMatic to get a publisherId for yourself
+                }
             });
 
             kk_requestBids();
-            
+
+            setTimeout(function () {
+                pbjs.removeAdUnit();
+                pbjs.addAdUnits(adUnits[1]);
+                kk_requestBids();
+            }, 5000);
+
         }); //pbjs que push fn ends
 
-        function kk_requestBids(){
+        function kk_requestBids() {
             pbjs.requestBids({
                 bidsBackHandler: sendAdserverRequest,
             });
@@ -133,7 +142,7 @@
                 pbjs.que.push(function () {
                     pbjs.setTargetingForGPTAsync();
                     googletag.pubads().refresh();
-                    
+
                 });
             });
         }
@@ -157,7 +166,7 @@
                 pbjs.que.push(function () {
                     pbjs.setTargetingForGPTAsync();
                     googletag.pubads().refresh();
-                    
+
                 });
             });
         }
@@ -184,4 +193,5 @@
     <br>
     <p><button onclick="kk_requestBids()">Refresh Ad Unit</button></p>
 </body>
+
 </html>
