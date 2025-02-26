@@ -152,25 +152,22 @@ let isInvalidNativeRequest = false;
 let biddersList = ['pubmatic'];
 const allBiddersList = ['all'];
 let bidCpmAdjustment;
-let mediaType;
 
-function _calculateBidCpmAdjustment(bid){
-  if (bid){
+function _calculateBidCpmAdjustment(bid) {
+  if (!bid) return;
+
   const { originalCurrency, currency, cpm, originalCpm, meta } = bid;
-
-  const adjustedCpm = originalCurrency !== currency && isFn(bid.getCpmInNewCurrency) 
-    ? bid.getCpmInNewCurrency(originalCurrency) 
+  const adjustedCpm = originalCurrency !== currency && isFn(bid.getCpmInNewCurrency)
+    ? bid.getCpmInNewCurrency(originalCurrency)
     : cpm;
+  const mediaType = meta?.mediaType;
+  bidCpmAdjustment = bidCpmAdjustment || {};
 
-    console.log('Inside Calculation bidCpmAdjustment : ', bid);
-    console.log('Inside Calculation bidCpmAdjustment -> getCpmInNewCurrency  : ',adjustedCpm);  
-
-  bidCpmAdjustment = parseFloat(((originalCpm - adjustedCpm) / originalCpm).toFixed(2));
-  mediaType = meta?.mediaType;
-  console.log('Inside Calculation bidCpmAdjustment -> difference : ', bidCpmAdjustment);
+  if (mediaType) {
+    bidCpmAdjustment[mediaType] = Number(((originalCpm - adjustedCpm) / originalCpm).toFixed(2));
   }
+  bidCpmAdjustment.currency = originalCurrency;
 };
-
 
 export function _getDomainFromURL(url) {
   let anchor = document.createElement('a');
@@ -711,8 +708,6 @@ function _createImpressionObject(bid, bidderRequest) {
     secure: 1,
     ext: {
       pmZoneId: _parseSlotParam('pmzoneid', bid.params.pmzoneid),
-      bidCpmAdjustment: bidCpmAdjustment ,
-      mediaType : mediaType
     },
     bidfloorcur: bid.params.currency ? _parseSlotParam('currency', bid.params.currency) : DEFAULT_CURRENCY,
     displaymanager: 'Prebid.js',
@@ -1231,6 +1226,9 @@ export const spec = {
     payload.ext.wrapper.wv = $$REPO_AND_VERSION$$;
     payload.ext.wrapper.transactionId = conf.transactionId;
     payload.ext.wrapper.wp = 'pbjs';
+    // Set BidCpmAdjustment of last auction
+    payload.ext.bidCpmAdjustment = bidCpmAdjustment;
+
     const allowAlternateBidder = bidderRequest ? bidderSettings.get(bidderRequest.bidderCode, 'allowAlternateBidderCodes') : undefined;
     if (allowAlternateBidder !== undefined) {
       payload.ext.marketplace = {};
@@ -1541,7 +1539,7 @@ export const spec = {
 
   onBidWon: (bid) => {
     _calculateBidCpmAdjustment(bid);
-  } 
+  }
 };
 
 registerBidder(spec);
