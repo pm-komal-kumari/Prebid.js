@@ -9,10 +9,11 @@ import { getLowEntropySUA } from '../src/fpd/sua.js';
  */
 
 /**
- * This RTD module has a dependency on the priceFloors module.
+ * This RTD module has a dependency on the priceFloors module and timeoutRtdProvider module.
  * We utilize the continueAuction function from the priceFloors module to incorporate price floors data into the current auction.
  */
 import { continueAuction } from './priceFloors.js'; // eslint-disable-line prebid/validate-imports
+import { timeoutRtdFunctions } from './timeoutRtdProvider.js'; // eslint-disable-line prebid/validate-imports
 
 const CONSTANTS = Object.freeze({
   SUBMODULE_NAME: 'pubmatic',
@@ -191,6 +192,32 @@ const init = (config, _userConsent) => {
  */
 
 const getBidRequestData = (reqBidsConfigObj, callback) => {
+  const rules = {
+                includesVideo: {
+                    "true": 200,
+                    "false": 50
+                },
+                numAdUnits: {
+                    "1-5": 100,
+                    "6-10": 200,
+                    "11-15": 300
+                },
+                deviceType: {
+                    "2": 50,
+                    "4": 100,
+                    "5": 200
+                },
+                connectionSpeed: {
+                    "slow": 200,
+                    "medium": 100,
+                    "fast": 50,
+                    "unknown": 10
+                }
+  }
+
+  //Config file should have ML data for rules.
+  timeoutRtdFunctions.handleTimeoutIncrement(reqBidsConfigObj, rules);
+
   _pubmaticFloorRulesPromise.then(() => {
     const hookConfig = {
       reqBidsConfigObj,
