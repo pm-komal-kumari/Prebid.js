@@ -3,6 +3,9 @@ import { logError, isStr, logMessage, isPlainObject, isEmpty, isFn, mergeDeep } 
 import { config as conf } from '../src/config.js';
 import { getDeviceType as fetchDeviceType, getOS } from '../libraries/userAgentUtils/index.js';
 import { getLowEntropySUA } from '../src/fpd/sua.js';
+import { getGlobal } from '../src/prebidGlobal.js';
+import { calculateTimeoutModifier } from '../libraries/bidderTimeoutUtils/bidderTimeoutUtils.js';
+
 
 /**
  * @typedef {import('../modules/rtdModule/index.js').RtdSubmodule} RtdSubmodule
@@ -13,7 +16,7 @@ import { getLowEntropySUA } from '../src/fpd/sua.js';
  * We utilize the continueAuction function from the priceFloors module to incorporate price floors data into the current auction.
  */
 import { continueAuction } from './priceFloors.js'; // eslint-disable-line prebid/validate-imports
-import { timeoutRtdFunctions } from './timeoutRtdProvider.js'; // eslint-disable-line prebid/validate-imports
+//import { timeoutRtdFunctions } from './timeoutRtdProvider.js'; // eslint-disable-line prebid/validate-imports
 
 const CONSTANTS = Object.freeze({
   SUBMODULE_NAME: 'pubmatic',
@@ -210,13 +213,15 @@ const getBidRequestData = (reqBidsConfigObj, callback) => {
                 connectionSpeed: {
                     "slow": 200,
                     "medium": 100,
-                    "fast": 50,
+                    "fast": 80,
                     "unknown": 10
                 }
   }
 
-  //Config file should have ML data for rules.
-  timeoutRtdFunctions.handleTimeoutIncrement(reqBidsConfigObj, rules);
+  const adUnits = reqBidsConfigObj.adUnits || getGlobal().adUnits;
+  const timeoutModifier = calculateTimeoutModifier(adUnits, rules);
+  const bidderTimeout = reqBidsConfigObj.timeout || getGlobal().getConfig('bidderTimeout');
+  reqBidsConfigObj.timeout = bidderTimeout + timeoutModifier;
 
   _pubmaticFloorRulesPromise.then(() => {
     const hookConfig = {
