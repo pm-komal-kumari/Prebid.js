@@ -162,6 +162,18 @@ describe('PubMatic adapter', () => {
       expect(isValid).to.equal(true);
     });
 
+    it('should return false if bid or bid.params is missing', () => {
+      // Test with undefined bid
+      let isValid = spec.isBidRequestValid(undefined);
+      expect(isValid).to.equal(false);
+
+      // Test with bid but no params
+      const bid = utils.deepClone(validBidRequests[0]);
+      delete bid.params;
+      isValid = spec.isBidRequestValid(bid);
+      expect(isValid).to.equal(false);
+    });
+
     it('should return false if publisherId is missing', () => {
       const bid = utils.deepClone(validBidRequests[0]);
       delete bid.params.publisherId;
@@ -201,6 +213,21 @@ describe('PubMatic adapter', () => {
           delete videoBidRequest.mediaTypes.context;
           const isValid = spec.isBidRequestValid(videoBidRequest);
           expect(isValid).to.equal(false);
+        });
+
+        it('should return false if videoMediaTypes.context is not present', () => {
+          // Create a bid with video mediaType but without context property
+          const bidWithoutContext = utils.deepClone(validBidRequests[0]);
+          delete bidWithoutContext.mediaTypes.banner;
+          bidWithoutContext.mediaTypes.video = {
+            playerSize: [[640, 480]],
+            mimes: ['video/mp4'],
+            protocols: [1, 2, 5],
+            // context is intentionally omitted
+            skippable: false
+          };
+          const isValid = spec.isBidRequestValid(bidWithoutContext);
+          expect(isValid).to.equal(false);
         })
 
         it('should return true if banner/native present, but outstreamAU or renderer is missing', () => {
@@ -215,6 +242,28 @@ describe('PubMatic adapter', () => {
 
         it('should return false if outstreamAU or renderer is missing', () => {
           const isValid = spec.isBidRequestValid(videoBidRequest);
+          expect(isValid).to.equal(false);
+        });
+
+        it('should return false for outstream bids without outstreamAU and renderer', () => {
+          // Create a bid with outstream video context but without outstreamAU, renderer, banner or native
+          const outStreamBidNoRenderer = utils.deepClone(validBidRequests[0]);
+          delete outStreamBidNoRenderer.mediaTypes.banner;
+          outStreamBidNoRenderer.mediaTypes.video = {
+            playerSize: [[640, 480]],
+            mimes: ['video/mp4'],
+            protocols: [1, 2, 5],
+            context: 'outstream',
+            skippable: false
+          };
+          // Ensure no outstreamAU parameter
+          if (outStreamBidNoRenderer.params.outstreamAU) {
+            delete outStreamBidNoRenderer.params.outstreamAU;
+          }
+          // Ensure no renderer
+          outStreamBidNoRenderer.renderer = undefined;
+
+          const isValid = spec.isBidRequestValid(outStreamBidNoRenderer);
           expect(isValid).to.equal(false);
         });
       });
