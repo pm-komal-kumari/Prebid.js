@@ -6,7 +6,7 @@ import { config as conf } from '../../../src/config';
 import * as hook from '../../../src/hook.js';
 import {
     registerSubModule, pubmaticSubmodule, getFloorsConfig, fetchData,
-    getCurrentTimeOfDay, getBrowserType, getOs, getDeviceType, getCountry, getBidder, getUtm, _country,
+    getCurrentTimeOfDay, getBrowserType, getOs, getDeviceType, getCountry, getBidder, getHasId, getUtm, _country,
     _profileConfigs, _floorsData, defaultValueTemplate, withTimeout, configMerged
 } from '../../../modules/pubmaticRtdProvider.js';
 import sinon from 'sinon';
@@ -235,6 +235,11 @@ describe('Pubmatic RTD Provider', () => {
             expect(getUtm()).to.be.oneOf(['0', '1']);
         });
 
+        // it('should set hasId correctly', () => {
+        //     expect(getHasId()).to.be.a('string');
+        //     expect(getHasId()).to.be.oneOf(['0', '1']);
+        // });
+
         it('should extract bidder correctly', () => {
             expect(getBidder({ bidder: 'pubmatic' })).to.equal('pubmatic');
             expect(getBidder({})).to.be.undefined;
@@ -313,7 +318,8 @@ describe('Pubmatic RTD Provider', () => {
                 'os',
                 'country',
                 'utm',
-                'bidder'
+                'bidder',
+                'hasId'
             ]);
 
             Object.values(result.floors.additionalSchemaFields).forEach(field => {
@@ -362,6 +368,7 @@ describe('Pubmatic RTD Provider', () => {
             expect(result.floors.additionalSchemaFields.country).to.equal(getCountry);
             expect(result.floors.additionalSchemaFields.utm).to.equal(getUtm);
             expect(result.floors.additionalSchemaFields.bidder).to.equal(getBidder);
+            expect(result.floors.additionalSchemaFields.hasId).to.equal(getHasId);
         });
 
         it('should log error when profileConfigs is not an object', () => {
