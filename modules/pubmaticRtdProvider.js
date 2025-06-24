@@ -66,6 +66,7 @@ export const defaultValueTemplate = {
 };
 
 let initTime;
+let targetHasIds;
 let _fetchFloorRulesPromise = null; let _fetchConfigPromise = null;
 export let configMerged;
 // configMerged is a reference to the function that can resolve configMergedPromise whenever we want
@@ -142,10 +143,10 @@ export const getHasId = () => {
   );
 
   const identityPartners = Array.from(new Set([...userIdPartners, ...publisherProvidedEidList]));
-  if (identityPartners.length === 0) {
+  if (identityPartners.length === 0 || targetHasIds.length === 0) {
     return CONSTANTS.HAS_ID_VALUES.FALSE;
   }
-  return CONSTANTS.TARGET_HAS_IDS.some(partner => identityPartners.includes(partner)) ? CONSTANTS.HAS_ID_VALUES.TRUE : CONSTANTS.HAS_ID_VALUES.FALSE;
+  return targetHasIds.some(partner => identityPartners.includes(partner)) ? CONSTANTS.HAS_ID_VALUES.TRUE : CONSTANTS.HAS_ID_VALUES.FALSE;
 }
 
 export const getFloorsConfig = (floorsData, profileConfigs) => {
@@ -173,6 +174,8 @@ export const getFloorsConfig = (floorsData, profileConfigs) => {
     const defaultValues = config.defaultValues ?? {};
     // If floorsData is not present, use default values
     const finalFloorsData = floorsData ?? { ...defaultValueTemplate, values: { ...defaultValues } };
+
+    targetHasIds = floorsData?.userIds ?? [];
 
     delete config.defaultValues;
     // If skiprate is provided in configs, overwrite the value in finalFloorsData
