@@ -62,6 +62,7 @@ export const defaultValueTemplate = {
 let initTime;
 let _fetchFloorRulesPromise = null; let _fetchConfigPromise = null;
 export let configMerged;
+let ymProfileConfigs;
 // configMerged is a reference to the function that can resolve configMergedPromise whenever we want
 let configMergedPromise = new Promise((resolve) => { configMerged = resolve; });
 export let _country;
@@ -187,6 +188,28 @@ export const fetchData = async (publisherId, profileId, type) => {
     }
 };
 
+
+/**
+ * Filter out specified bidders from adUnits with matching code
+ * @param {Array} bidderList - List of bidder names to be filtered out
+ * @param {Object} reqBidsConfigObj - The bid request configuration object
+ * @param {string} adUnitCode - The code of the adUnit to filter bidders from
+ */
+export const filterBidders = (bidderList, reqBidsConfigObj, adUnitCode) => {
+  // Validate inputs
+  if (!bidderList || !Array.isArray(bidderList) || bidderList.length === 0 ||
+      !reqBidsConfigObj || !reqBidsConfigObj.adUnits || !Array.isArray(reqBidsConfigObj.adUnits)) {
+    return;
+  }
+  // Find the adUnit with the matching code
+  const adUnit = reqBidsConfigObj.adUnits.find(unit => unit.code === adUnitCode);
+  
+  // If adUnit exists and has bids array, filter out the specified bidders
+  if (adUnit && adUnit.bids && Array.isArray(adUnit.bids)) {
+    adUnit.bids = adUnit.bids.filter(bid => !bidderList.includes(bid.bidder));
+  }
+};
+
 /**
  * Initialize the Pubmatic RTD Module.
  * @param {Object} config
@@ -217,6 +240,7 @@ const init = (config, _userConsent) => {
     _fetchConfigPromise = fetchData(publisherId, profileId, "CONFIGS");
 
     _fetchConfigPromise.then(async (profileConfigs) => {
+      ymProfileConfigs = profileConfigs;
       const auctionDelay = conf?.getConfig('realTimeData')?.auctionDelay || 300;
       const maxWaitTime = 0.8 * auctionDelay;
 
@@ -238,6 +262,12 @@ const init = (config, _userConsent) => {
  */
 const getBidRequestData = (reqBidsConfigObj, callback) => {
     configMergedPromise.then(() => {
+      if(ymProfileConfigs?.plugins?.bidderExclusion?.enabled){
+        const bidderExclusionConfig = ymProfileConfigs?.plugins?.bidderExclusion?.config;
+        for (const adunit in bidderExclusionConfig){
+          filterBidders(bidderExclusionConfig[adunit], reqBidsConfigObj, adunit);
+        }
+      }
         const hookConfig = {
             reqBidsConfigObj,
             context: this,
