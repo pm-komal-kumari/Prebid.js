@@ -292,8 +292,8 @@ const init = (config, _userConsent) => {
 const getBidRequestData = (reqBidsConfigObj, callback) => {
   _fetchConfigPromise.then((profileConfigs) => {
     const timeoutConfig = profileConfigs?.plugins?.bidderTimeout;
-
-    if (timeoutConfig?.enabled) {
+    const isSkipped = Math.random() * 100 < parseFloat(timeoutConfig?.skipRate);
+    if (timeoutConfig?.enabled && !isSkipped) {
       let rules;
       const adUnits = reqBidsConfigObj.adUnits || getGlobal().adUnits;
       const bidderTimeout = timeoutConfig.baseTimeout ? timeoutConfig.baseTimeout : reqBidsConfigObj.timeout || getGlobal().getConfig('bidderTimeout');
