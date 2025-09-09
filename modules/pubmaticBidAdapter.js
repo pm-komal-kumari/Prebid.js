@@ -835,7 +835,7 @@ export const spec = {
         allowedIabCategories = allowedIabCategories.concat(acat);
       }
     })
-    const data = converter.toORTB({ validBidRequests, bidderRequest });
+    const data = converter.toORTB({ bidRequests: validBidRequests, bidderRequest });
 
     const serverRequest = {
       method: 'POST',
