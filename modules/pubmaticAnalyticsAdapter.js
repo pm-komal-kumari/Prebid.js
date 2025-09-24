@@ -291,7 +291,6 @@ function executeBidsLoggerCall(event, highestCpmBids) {
         let adapterName = getAdapterNameForAlias(bid.adapterCode || bid.bidder);
         bid.adapterName = adapterName;
         bid.bidder = adapterName;
-        bid['floorRuleValue'] = auctionCache.adUnitCodes[bid.adUnitId].floorRuleValue; 
       })
     }
   });
