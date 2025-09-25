@@ -403,12 +403,6 @@ const eventHandlers = {
       }
       cache.auctions[args.auctionId].adUnitCodes[bid.adUnitCode].bids[bid.bidId] = [copyRequiredBidDetails(bid)];
       if (bid.floorData) {
-        const frvData = bid.getFloor({
-          currency: 'USD',
-          mediaType: '*',
-          size: '*'
-        });
-        cache.auctions[args.auctionId].adUnitCodes[bid.adUnitCode].floorRuleValue = frvData?.floor;
         cache.auctions[args.auctionId].floorData['floorRequestData'] = bid.floorData;
       }
     })
@@ -475,6 +469,10 @@ const eventHandlers = {
       }
       if (!cachedBid.status) {
         cachedBid.status = NO_BID;
+        if (bid.floorData) {
+          const frvData = bid.getFloor();
+          cache.auctions[args.auctionId].adUnitCodes[bid.adUnitCode].floorRuleValue = frvData?.floor;
+        }
       }
       if (!cachedBid.clientLatencyTimeMs) {
         cachedBid.clientLatencyTimeMs = Date.now() - cache.auctions[bid.auctionId].timestamp;
