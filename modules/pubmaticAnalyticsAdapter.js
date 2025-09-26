@@ -472,6 +472,7 @@ const eventHandlers = {
         if (bid.floorData) {
           const frvData = bid.getFloor();
           cache.auctions[args.auctionId].adUnitCodes[bid.adUnitCode].floorRuleValue = frvData?.floor;
+          console.log(' For testing FRV in case of no bid ')
         }
       }
       if (!cachedBid.clientLatencyTimeMs) {
